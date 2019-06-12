@@ -21,7 +21,6 @@ module exception_alpha(
         input                       allow_interrupt,
         input [ 7:0]                interrupt_flag,
         input                       is_inst,
-        input                       is_branch,
 
         output logic                exp_detect,
         output logic                cp0_exp_en,
