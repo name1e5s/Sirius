@@ -4,10 +4,6 @@
 
 // Alpha and Beta shares the same ctrl signal.
 module decoder_ctrl(
-        input                       clk,
-        input                       rst,
-        input						flush,
-
         input [31:0]				instruction,
         input [5:0]					opcode,
         input [4:0]					rt,

@@ -1,8 +1,6 @@
 `timescale 1ns / 1ps
 `include "common.vh"
 module writeback_beta(
-        input                       clk,
-        input                       rst,
         input [31:0]                result,
         input [4:0]                 reg_dest,
         input                       write_en,

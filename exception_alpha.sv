@@ -21,6 +21,8 @@ module exception_alpha(
         input                       allow_interrupt,
         input [ 7:0]                interrupt_flag,
         input                       is_inst,
+        input                       slave_exp_undefined_inst,
+        input                       slave_exp_overflow,
 
         output logic                exp_detect,
         output logic                cp0_exp_en,
@@ -34,7 +36,6 @@ module exception_alpha(
 );
 
     reg  is_branch_slot;
-    assign cp0_exp_bd = is_branch_slot;
 
     always_ff @(posedge clk) begin : check_is_delay_slot
         if(rst || (!ex_mem_stall && exp_detect))
@@ -49,6 +50,7 @@ module exception_alpha(
         cp0_exl_clean = 1'b0;
         cp0_exp_bad_vaddr_wen = 1'b0;
         exp_detect = 1'b1;
+        cp0_exp_bd = is_branch_slot;
         cp0_exp_epc = is_branch_slot ? pc_address - 32'd4: pc_address;
         if(is_inst && allow_interrupt && interrupt_flag != 8'd0)
             cp0_exp_code = 5'h00;
@@ -77,6 +79,17 @@ module exception_alpha(
             cp0_exp_code = mem_wen ? 5'h05:5'h04;
             cp0_exp_bad_vaddr = mem_address;
             cp0_exp_bad_vaddr_wen = 1'b1;
+        end
+        else if(slave_exp_undefined_inst) begin
+            cp0_exp_bd = is_branch_instruction;
+            cp0_exp_epc = is_branch_instruction? pc_address : pc_address + 32'd4;
+            cp0_exp_code = 5'h0a;
+
+        end
+        else if(slave_exp_overflow) begin
+            cp0_exp_bd = is_branch_instruction;
+            cp0_exp_epc = is_branch_instruction? pc_address : pc_address + 32'd4;
+            cp0_exp_code = 5'h0c;
         end
         else begin
             cp0_exp_en = 1'b0;
