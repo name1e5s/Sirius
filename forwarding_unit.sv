@@ -15,11 +15,11 @@ module forwarding_unit(
     input [31:0]            master_mem_data,
     input [ 4:0]            reg_addr,
     input [31:0]            reg_data,
-    output logic [31:0]     result_data,
+    output logic [31:0]     result_data
 );
 
     always_comb begin : get_result
-        unique if(reg_addr != 32'd0) begin
+        if(reg_addr != 32'd0) begin
             if(slave_ex_reg_en && slave_ex_addr == reg_addr)
                 result_data = slave_ex_data;
             else if(master_ex_reg_en && master_ex_addr == reg_addr)
@@ -28,7 +28,7 @@ module forwarding_unit(
                 result_data = slave_mem_data;
             else if(master_mem_reg_en && master_mem_addr == reg_addr)
                 result_data = master_mem_data;
-            else begin
+            else
                 result_data = reg_data;
         end
         else begin

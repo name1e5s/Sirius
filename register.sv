@@ -15,7 +15,7 @@ module register(
 
 		input 						wen1_a,
 		input [4:0]					waddr1_a,
-		input [31:0]				wdata1_a
+		input [31:0]				wdata1_a,
 
         input [4:0]					raddr2_a,
 		output logic [31:0] 		rdata2_a,

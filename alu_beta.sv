@@ -1,5 +1,5 @@
 `timescale 1ns / 1ps
-`include "alu_common.vh"
+`include "alu_op.vh"
 // Slave ALU, thie ALU doesn't handle HILO operations and
 // priv instructions.
 module alu_beta(
@@ -11,7 +11,7 @@ module alu_beta(
         input [31:0]                src_b,
 
         output logic                exp_overflow,
-        output logic [31:0]         result,
+        output logic [31:0]         result
 );
 
     wire [31:0] 			     add_result = src_a + src_b;

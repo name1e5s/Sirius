@@ -1,5 +1,5 @@
 `timescale 1ns / 1ps
-`include "alu_common.vh"
+`include "alu_op.vh"
 // In our design, hilo-related operations and  is handled ONLY by
 // alpha pipeline.
 

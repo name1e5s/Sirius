@@ -199,16 +199,16 @@ module pipeline_beta(
     );
 
     always_comb begin : get_alu_src_a
-        if(id_alu_src == `SRC_SFT)
+        if(decoder_alu_src == `SRC_SFT)
             id_alu_src_a = { 27'd0 ,decoder_shamt};
-        else if(id_alu_src == `SRC_PCA)
+        else if(decoder_alu_src == `SRC_PCA)
             id_alu_src_a = pc_address + 32'd8;
         else
             id_alu_src_a = rs_value;
     end
 
     always_comb begin: get_alu_src_b
-        unique case(id_alu_src)
+        unique case(decoder_alu_src)
             `SRC_IMM: begin
             if(decoder_alu_imm_src)
                 id_alu_src_b = { 16'd0, decoder_immediate };
