@@ -20,12 +20,14 @@ module decoder_ctrl(
         output logic [2:0] 			mem_size, // Memory operation size -- B,H,W,WL,WR
         output logic [4:0] 			wb_reg_dest, // Writeback register address
         output logic       			wb_reg_en, // Writeback is enabled
-        output logic       			unsigned_flag   // Is this a unsigned operation in MEM stage.
+        output logic       			unsigned_flag,   // Is this a unsigned operation in MEM stage.
+        output logic                priv_inst   // Is this instruction a priv inst?
 );
 
     // Control logic.
     always_comb begin : decoder
         undefined_inst = 1'b0;
+        priv_inst = 1'b0;
         casex({opcode, funct})
             {6'b000000, 6'b100000}: // ADD
                 {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
@@ -123,12 +125,16 @@ module decoder_ctrl(
             {6'b000000, 6'b010011}: // MTLO
                 {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
                     {`ALU_MTLO, `SRC_REG, `SIGN_EXTENDED, `MEM_NOOP, `SZ_FULL, rd, 1'b0, `ZERO_EXTENDED};
-            {6'b000000, 6'b001101}: // BREAK
+            {6'b000000, 6'b001101}: begin // BREAK
                 {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
                     {`ALU_BREK, `SRC_REG, `SIGN_EXTENDED, `MEM_NOOP, `SZ_FULL, rt, 1'b0, `ZERO_EXTENDED};
-            {6'b000000, 6'b001100}: // SYSCALL
+                priv_inst = 1'b1;
+            end
+            {6'b000000, 6'b001100}: begin // SYSCALL
                 {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
                     {`ALU_SYSC, `SRC_REG, `SIGN_EXTENDED, `MEM_NOOP, `SZ_FULL, rt, 1'b0, `ZERO_EXTENDED};
+                priv_inst = 1'b1;
+            end
             {6'b100000, 6'bxxxxxx}: // LB
                 {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
                     {`ALU_ADDU, `SRC_IMM, `SIGN_EXTENDED, `MEM_LOAD, `SZ_BYTE, rt, 1'b1, `SIGN_EXTENDED};
@@ -154,6 +160,7 @@ module decoder_ctrl(
                 {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
                     {`ALU_ADDU, `SRC_IMM, `SIGN_EXTENDED, `MEM_STOR, `SZ_FULL, rt, 1'b0, `ZERO_EXTENDED};
             {6'b010000, 6'bxxxxxx}: begin // PRIV_INST
+                priv_inst = 1'b1;
                 if(instruction == 32'b01000010000000000000000000011000) // ERET
                     {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
                         {`ALU_ERET, `SRC_REG, `SIGN_EXTENDED, `MEM_NOOP, `SZ_FULL, rt, 1'b0, `ZERO_EXTENDED};

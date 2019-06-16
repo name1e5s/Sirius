@@ -2,9 +2,6 @@
 `include "common.vh"
 
 module decoder_alpha(
-        input                       clk,
-        input                       rst,
-
         input [31:0]                instruction,
 
         output logic [5:0]          opcode,
