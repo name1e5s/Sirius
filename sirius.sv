@@ -99,11 +99,15 @@ module sirius(
     );
 
     // IF-ID ... no registers!
+    wire if_empty;
+    wire if_amlost_empty;
+    wire if_full;
+    wire id_enable_slave;
     instruction_fifo(
         .clk                    (clk),
         .rst                    (rst),
         .read_en1               (), // TODO: provided by id-stage
-        .read_en2               (),
+        .read_en2               (id_enable_slave),
         .write_en1              (inst_ok && inst_ok_1),
         .write_en2              (inst_ok && inst_ok_2),
         .write_data_1           (inst_data_1),
@@ -114,9 +118,9 @@ module sirius(
         .data_out2              (if_id_instruction_slave),
         .address_out1           (if_id_pc_address),
         .address_out2           (if_id_pc_address_slave),
-        .empty                  (),
-        .almost_empty           (),
-        .full                   ()
+        .empty                  (if_empty),
+        .almost_empty           (if_amlost_empty),
+        .full                   (if_full)
     );
 
     decoder_alpha decoder_master(
@@ -191,4 +195,19 @@ module sirius(
         .priv_inst              (id_priv_inst_slave)
     );
 
+    dual_engine engine_0(
+        .id_priv_inst_master        (id_priv_inst),
+        .id_wb_reg_dest_master      (id_wb_reg_dest),
+        .id_wb_reg_en_master        (id_wb_reg_en),
+        .id_opcode_slave            (id_opcode_slave),
+        .id_rs_slave                (id_rs_slave),
+        .id_rt_slave                (id_rt_slave),
+        .id_mem_type_slave          (id_mem_type_slave),
+        .id_is_branch_instr_slave   (id_is_branch_instr_slave),
+        .id_priv_inst_slave         (id_priv_inst_slave),
+        .fifo_empty                 (if_empty),
+        .fifo_almost_empty          (if_almost_empty),
+        .enable_master              (),
+        .enable_slave               (id_enable_slave)
+    );
 endmodule

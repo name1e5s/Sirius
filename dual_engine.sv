@@ -31,16 +31,16 @@ module dual_engine(
         else begin
             if(id_wb_reg_en_master) begin
                 if(id_opcode_slave == 5'd0) begin
-                    enable_slave = (~((id_wb_reg_dest_master == id_rs_slave) || 
+                    enable_slave = (~(|id_wb_reg_dest_master)) && (~((id_wb_reg_dest_master == id_rs_slave) || 
                                       (id_wb_reg_dest_master == id_rt_slave))) && fifo;
                 end
                 else begin
-                    enable_slave = (~(id_wb_reg_dest_master == id_rs_slave)) && fifo;
+                    enable_slave =  (~(|id_wb_reg_dest_master)) && (~(id_wb_reg_dest_master == id_rs_slave)) && fifo;
                 end 
             end
             else begin
                 enable_slave <= 1'b1;
-            end 
+            end
         end 
     end
 endmodule
