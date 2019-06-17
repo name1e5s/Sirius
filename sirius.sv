@@ -54,43 +54,24 @@ module sirius(
     wire                id_wb_reg_en;
     wire                id_unsigned_flag;
     wire                id_priv_inst;
-    // ID -- SLAVE
-    wire [5:0]          id_opcode_slave, id_funct_slave;
-    wire [4:0]          id_rs_slave, id_rt_slave, id_rd_slave, id_shamt_slave;
-    wire [15:0]         id_immediate_slave;
-    wire [25:0]         id_instr_index_slave;
-    wire [2:0]          id_branch_type_slave;
-    wire                id_is_branch_instr_slave;
-    wire                id_is_branch_link_slave;
-    wire                id_is_hilo_accessed_slave;
-
-    wire                id_undefined_inst_slave;
-    wire [5:0]	        id_alu_op_slave;
-    wire [1:0]          id_alu_src_slave;
-    wire                id_alu_imm_src_slave;
-    wire [1:0]          id_mem_type_slave;
-    wire [2:0]          id_mem_size_slave;
-    wire [4:0]          id_wb_reg_dest_slave;
-    wire                id_wb_reg_en_slave;
-    wire                id_unsigned_flag_slave;
-    wire                id_priv_inst_slave;
+    // EX SIGNALS
 
     // MEM SIGNALS
     wire                mem_exception_taken;
     wire [31:0]         mem_exception_address;
 
     // IF-ID SIGNALS
-    wire [31:0]         if_id_pc_address;
-    wire [31:0]         if_id_pc_address_slave;
-    wire [31:0]         if_id_instruction;
-    wire [31:0]         if_id_instruction_slave;
+    reg [31:0]          if_id_pc_address;
+    reg [31:0]          if_id_instruction;
+    reg                 if_id_is_instruction;
+    reg                 if_id_in_delay_slot;
 
     pc pc_0(
         .clk                    (clk),
         .rst                    (rst),
         .pc_en                  (if_en),
         .inst_ok_1              (inst_ok_1),
-        .inst_ok_2              (inst_ok_2),
+        .inst_ok_2              (1'b0),
         .branch_taken           (id_branch_taken),
         .branch_address         (id_branch_address),
         .exception_taken        (mem_exception_taken),
@@ -98,30 +79,20 @@ module sirius(
         .pc_address             (if_pc_address)
     );
 
-    // IF-ID ... no registers!
-    wire if_empty;
-    wire if_amlost_empty;
-    wire if_full;
-    wire id_enable_slave;
-    instruction_fifo(
-        .clk                    (clk),
-        .rst                    (rst),
-        .read_en1               (), // TODO: provided by id-stage
-        .read_en2               (id_enable_slave),
-        .write_en1              (inst_ok && inst_ok_1),
-        .write_en2              (inst_ok && inst_ok_2),
-        .write_data_1           (inst_data_1),
-        .write_data_2           (inst_data_2),
-        .write_address_1        (if_pc_address),
-        .write_address_2        (if_pc_slave_address),
-        .data_out1              (if_id_instruction),
-        .data_out2              (if_id_instruction_slave),
-        .address_out1           (if_id_pc_address),
-        .address_out2           (if_id_pc_address_slave),
-        .empty                  (if_empty),
-        .almost_empty           (if_amlost_empty),
-        .full                   (if_full)
-    );
+    always_ff @(posedge clk) begin : if_id_registers
+        if(rst || (id_ex_en && !if_id_en) || flush) begin
+            if_id_pc_address    <= 32'd0;
+            if_id_instruction   <= 32'd0;
+            if_id_is_instruction<= 1'b0;
+            if_id_in_delay_slot <= 1'b0;
+        end
+        else if(if_id_en) begin
+            if_id_pc_address    <= if_pc_address;
+            if_id_instruction   <= inst_data_1;
+            if_id_is_instruction<= 1'b1;
+            if_id_in_delay_slot <= id_is_branch_instr;
+        end
+    end
 
     decoder_alpha decoder_master(
         .instruction            (if_id_instruction),
@@ -159,55 +130,143 @@ module sirius(
         .priv_inst              (id_priv_inst)
     );
 
-    decoder_alpha decoder_slave(
-        .instruction            (if_id_instruction),
-        .opcode                 (id_opcode_slave),
-        .rs                     (id_rs_slave),
-        .rt                     (id_rt_slave),
-        .rd                     (id_rd_slave),
-        .shamt                  (id_shamt_slave),
-        .funct                  (id_funct_slave),
-        .immediate              (id_immediate_slave),
-        .instr_index            (id_instr_index_slave),
-        .branch_type            (id_branch_type_slave),
-        .is_branch_instr        (id_is_branch_instr_slave),
-        .is_branch_link         (id_is_branch_link_slave),
-        .is_hilo_accessed       (id_is_hilo_accessed_slave)
+    forwarding_unit forwarding_rs(
+        .slave_ex_reg_en    (ex_reg_en),
+        .slave_ex_addr      (ex_addr),
+        .slave_ex_data      (ex_data),
+        .master_ex_reg_en   (master_ex_reg_en),
+        .master_ex_addr     (master_ex_addr),
+        .master_ex_data     (master_ex_data),
+        .slave_mem_reg_en   (mem_reg_en),
+        .slave_mem_addr     (mem_addr),
+        .slave_mem_data     (mem_data),
+        .master_mem_reg_en  (master_mem_reg_en),
+        .master_mem_addr    (master_mem_addr),
+        .master_mem_data    (master_mem_data),
+        .reg_addr           (decoder_rs),
+        .reg_data           (raddr2_a),
+        .result_data        (rs_value)
     );
 
-    decoder_crtl conrtol_slave(
-        .instruction            (if_id_instruction),
-        .opcode                 (id_opcode_slave),
-        .rt                     (id_rt_slave),
-        .rd                     (id_rd_slave),
-        .funct                  (id_funct_slave),
-        .is_branch              (id_is_branch_instr_slave),
-        .is_branch_al           (id_is_branch_link_slave),
-        .undefined_inst         (id_undefined_inst_slave),
-        .alu_op                 (id_alu_op_slave),
-        .alu_src                (id_alu_src_slave),
-        .alu_imm_src            (id_alu_imm_src_slave),
-        .mem_type               (id_mem_type_slave),
-        .mem_size               (id_mem_size_slave),
-        .wb_reg_dest            (id_wb_reg_dest_slave),
-        .wb_reg_en              (id_wb_reg_en_slave),
-        .unsigned_flag          (id_unsigned_flag_slave),
-        .priv_inst              (id_priv_inst_slave)
+    forwarding_unit forwarding_rt(
+        .slave_ex_reg_en    (ex_reg_en),
+        .slave_ex_addr      (ex_addr),
+        .slave_ex_data      (ex_data),
+        .master_ex_reg_en   (master_ex_reg_en),
+        .master_ex_addr     (master_ex_addr),
+        .master_ex_data     (master_ex_data),
+        .slave_mem_reg_en   (mem_reg_en),
+        .slave_mem_addr     (mem_addr),
+        .slave_mem_data     (mem_data),
+        .master_mem_reg_en  (master_mem_reg_en),
+        .master_mem_addr    (master_mem_addr),
+        .master_mem_data    (master_mem_data),
+        .reg_addr           (decoder_rt),
+        .reg_data           (raddr2_b),
+        .result_data        (rt_value)
     );
 
-    dual_engine engine_0(
-        .id_priv_inst_master        (id_priv_inst),
-        .id_wb_reg_dest_master      (id_wb_reg_dest),
-        .id_wb_reg_en_master        (id_wb_reg_en),
-        .id_opcode_slave            (id_opcode_slave),
-        .id_rs_slave                (id_rs_slave),
-        .id_rt_slave                (id_rt_slave),
-        .id_mem_type_slave          (id_mem_type_slave),
-        .id_is_branch_instr_slave   (id_is_branch_instr_slave),
-        .id_priv_inst_slave         (id_priv_inst_slave),
-        .fifo_empty                 (if_empty),
-        .fifo_almost_empty          (if_almost_empty),
-        .enable_master              (),
-        .enable_slave               (id_enable_slave)
+    logic [31:0] id_alu_src_a, id_alu_src_b;
+    // Get alu sources
+    always_comb begin : get_alu_src_a
+        if(id_alu_src == `SRC_SFT)
+            id_alu_src_a = { 27'd0 ,id_shamt};
+        else if(id_alu_src == `SRC_PCA)
+            id_alu_src_a = if_id_pc_address + 32'd8;
+        else
+            id_alu_src_a = rs_value;
+    end
+
+    always_comb begin: get_alu_src_b
+        unique case(id_alu_src)
+            `SRC_IMM: begin
+            if(id_alu_imm_src)
+                id_alu_src_b = { 16'd0, id_immediate };
+            else
+                id_alu_src_b = { {16{id_immediate[15]}}, id_immediate};
+            end
+            default:
+                id_alu_src_b = rt_value;
+        endcase
+    end
+
+    branch branch_unit(
+        .en                 (if_id_en),
+        .pc_address         (if_id_pc_address),
+        .instruction        (if_id_instruction),
+        .is_branch_instr    (id_is_branch_instr),
+        .branch_type        (id_branch_type),
+        .data_rs            (rs_value),
+        .data_rt            (rt_value),
+        .branch_taken       (id_branch_taken),
+        .branch_address     (id_branch_address)
     );
+
+    // ID-EX SIGNALS
+    // MASTER
+    reg [31:0]  id_ex_pc_address;
+    reg [31:0]  id_ex_instruction;
+    reg [31:0]  id_ex_rs_value;
+    reg [31:0]  id_ex_rt_value;
+    reg [31:0]  id_ex_alu_src_a;
+    reg [31:0]  id_ex_alu_src_b;
+    reg [ 1:0]  id_ex_mem_type;
+    reg [ 2:0]  id_ex_mem_size;
+    reg         id_ex_mem_unsigned_flag;
+    reg [ 4:0]  id_ex_wb_reg_dest;
+    reg         id_ex_wb_reg_en;
+    reg [ 4:0]  id_ex_rd_addr;
+    reg [ 2:0]  id_ex_sel;
+    reg         id_ex_is_branch_link;
+    reg [ 5:0]  id_ex_alu_op;
+    reg [ 4:0]  id_ex_rt_addr;
+    reg         id_ex_undefined_inst;
+    reg         id_ex_is_inst;
+    reg         id_ex_in_delay_slot;
+
+    always_ff @(posedge clk) begin
+        if(rst || (!id_ex_en && ex_mem_en) || flush) begin
+            id_ex_pc_address        <= 32'd0;
+            id_ex_instruction       <= 32'd0;
+            id_ex_rs_value          <= 32'd0;
+            id_ex_rt_value          <= 32'd0;
+            id_ex_alu_src_a         <= 32'd0;
+            id_ex_alu_src_b         <= 32'd0;
+            id_ex_mem_type          <= `MEM_NOOP;
+            id_ex_mem_size          <= `SZ_FULL;
+            id_ex_mem_unsigned_flag <= 1'b0;
+            id_ex_wb_reg_dest       <= 5'd0;
+            id_ex_wb_reg_en         <= 1'd0;
+            id_ex_rd_addr           <= 5'd0;
+            id_ex_sel               <= 3'd0;
+            id_ex_is_branch_link    <= 1'b0;
+            id_ex_alu_op            <= 6'd0;
+            id_ex_rt_addr           <= 5'd0;
+            id_ex_undefined_inst    <= 1'd0;
+            id_ex_is_inst           <= 1'd0;
+            id_ex_in_delay_slot     <= 1'd0;
+        end
+        else if(id_ex_en) begin 
+            id_ex_pc_address        <= if_pc_address;
+            id_ex_instruction       <= if_id_instruction;
+            id_ex_rs_value          <= rs_value;
+            id_ex_rt_value          <= rt_value;
+            id_ex_alu_src_a         <= id_alu_src_a;
+            id_ex_alu_src_b         <= id_alu_src_b;
+            id_ex_mem_type          <= id_mem_type;
+            id_ex_mem_size          <= id_mem_size;
+            id_ex_mem_unsigned_flag <= id_unsigned_flag;
+            id_ex_wb_reg_dest       <= id_wb_reg_dest;
+            id_ex_wb_reg_en         <= id_wb_reg_en;
+            id_ex_rd_addr           <= id_rd;
+            id_ex_sel               <= if_id_instruction[2:0];
+            id_ex_is_branch_link    <= id_is_branch_link;
+            id_ex_alu_op            <= id_alu_op;
+            id_ex_rt_addr           <= id_rt;
+            id_ex_undefined_inst    <= id_undefined_inst;
+            id_ex_is_inst           <= if_id_is_instruction;
+            id_ex_in_delay_slot     <= if_id_in_delay_slot;
+        end
+    end
+
 endmodule

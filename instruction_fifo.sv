@@ -46,7 +46,7 @@ module instruction_fifo(
     assign address_out1 = address[read_pointer];
     assign address_out2 = address[read_pointer + 4'd1];
 
-    always_ff @(posedge clk) begin : update_write_pointer
+    always_ff @(posedge clk iff rst == 0, posedge rst) begin : update_write_pointer
         if(rst)
             write_pointer <= 4'd0;
         else if(write_en1 && write_en2)
@@ -57,7 +57,7 @@ module instruction_fifo(
             write_pointer <= write_pointer;
     end
 
-    always_ff @(posedge clk) begin : update_read_pointer
+    always_ff @(posedge clk iff rst == 0, posedge rst) begin : update_read_pointer
         if(rst)
             read_pointer <= 4'd0;
         else if(read_en1 && read_en2)
@@ -68,7 +68,7 @@ module instruction_fifo(
             read_pointer <= read_pointer;
     end
 
-    always_ff @(posedge clk) begin : update_counter
+    always_ff @(posedge clk iff rst == 0, posedge rst) begin : update_counter
         if(rst)
             data_count <= 4'd0;
         else if((write_en1 && (!read_en1) && (!read_en2)) &&

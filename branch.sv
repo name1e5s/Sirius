@@ -1,6 +1,7 @@
 `include "common.vh"
 // Branch unit in ex stage.
 module branch(
+        input                       en,
         input [31:0]                pc_address,
         input [31:0]                instruction,
         input                       is_branch_instr,
@@ -22,7 +23,10 @@ module branch(
     end
 
     always_comb begin : take_branch
-        if(is_branch_instr) begin
+        if(!en) begin
+            branch_taken = 1'b0;
+            branch_address = 32'hxxxxxxxx;
+        end else if(is_branch_instr) begin
             unique case(branch_type)
             `B_EQNE:
                 unique case(instruction[27:26])
@@ -65,7 +69,7 @@ module branch(
                 default: // Make compiler happy
                     begin
                         branch_address = 32'hxxxxxxxx;
-                        branch_taken = 1'bx;
+                        branch_taken = 1'b0;
                     end
                 endcase
             `B_LTGE:

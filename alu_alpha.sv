@@ -7,7 +7,6 @@
 module alu_alpha(
         input                       clk,
         input                       rst,
-        input                       stall_i,
         input                       flush_i,
         input                       hilo_accessed,
 
@@ -82,22 +81,20 @@ module alu_alpha(
         mult_op = 2'd0;
         mdu_prepare = 1'b0;
         if(!flush_i) begin
-            if(!stall_i) begin
-                mdu_prepare = 1'b1;
-                unique case(alu_op)
-                `ALU_DIV:
-                    div_op = 2'b10;
-                `ALU_DIVU:
-                    div_op = 2'b01;
-                `ALU_MULT:
-                    mult_op = 2'b10;
-                `ALU_MULTU:
-                    mult_op = 2'b01;
-                default: begin
-                    mdu_prepare = 1'b0;
-                end
-                endcase
+            mdu_prepare = 1'b0;
+            unique case(alu_op)
+            `ALU_DIV:
+                div_op = 2'b10;
+            `ALU_DIVU:
+                div_op = 2'b01;
+            `ALU_MULT:
+                mult_op = 2'b10;
+            `ALU_MULTU:
+                mult_op = 2'b01;
+            default: begin
+                mdu_prepare = 1'b0;
             end
+            endcase
         end
         else begin
             mdu_prepare = 1'b0;
