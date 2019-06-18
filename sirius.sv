@@ -25,11 +25,12 @@ module sirius(
         input [31:0]            data_data
 );
 
-    wire        if_en, if_id_en, id_ex_en, ex_mem_en, mem_wb_en;
+    wire                if_en, if_id_en, id_ex_en, ex_mem_en, mem_wb_en;
+    wire                flush;
 
     // IF SIGNALS
-    wire [31:0] if_pc_address;
-    wire [31:0] if_pc_slave_address = if_pc_address + 32'd4;
+    wire [31:0]         if_pc_address;
+    wire [31:0]         if_pc_slave_address = if_pc_address + 32'd4;
 
     // ID SIGNALS
     wire                id_branch_taken;
@@ -55,16 +56,87 @@ module sirius(
     wire                id_unsigned_flag;
     wire                id_priv_inst;
     // EX SIGNALS
+    wire [7:0]          ex_cop0_addr;
+    wire                ex_cop0_wen;
+    wire [31:0]         ex_cop0_data;
+    wire                ex_exp_overflow;
+    wire                ex_exp_eret;
+    wire                ex_exp_syscal;
+    wire                ex_exp_break;
+    wire [31:0]         ex_result;
+    wire                ex_stall_o;
 
     // MEM SIGNALS
-    wire                mem_exception_taken;
+    wire                mem_exception_taken = flush;
     wire [31:0]         mem_exception_address;
+    wire                mem_cp0_exp_en;
+    wire                mem_cp0_exp_badvaddr_en;
+    wire [31:0]         mem_cp0_exp_badvaddr;
+    wire                mem_cp0_exp_bd;
+    wire [4:0]          mem_cp0_exp_code;
+    wire [31:0]         mem_cp0_exp_epc;
+    wire                mem_cp0_exl_clean;
+    wire [31:0]         mem_cp0_epc_address;
+    wire                mem_cp0_allow_interrupt;
+    wire [7:0]          mem_cp0_interrupt_flag;
+    wire [31:0]         mem_result;
+    wire                mem_addr_error;
+
+    // WB SIGNALS
+    wire                wb_reg_write_en;
+    wire [4:0]          wb_reg_write_dest;
+    wire [31:0]         wb_reg_write_data;
 
     // IF-ID SIGNALS
     reg [31:0]          if_id_pc_address;
     reg [31:0]          if_id_instruction;
     reg                 if_id_is_instruction;
     reg                 if_id_in_delay_slot;
+
+    // ID-EX SIGNALS
+    // MASTER
+    reg [31:0]  id_ex_pc_address;
+    reg [31:0]  id_ex_instruction;
+    reg [31:0]  id_ex_rs_value;
+    reg [31:0]  id_ex_rt_value;
+    reg [31:0]  id_ex_alu_src_a;
+    reg [31:0]  id_ex_alu_src_b;
+    reg [ 1:0]  id_ex_mem_type;
+    reg [ 2:0]  id_ex_mem_size;
+    reg         id_ex_mem_unsigned_flag;
+    reg [ 4:0]  id_ex_wb_reg_dest;
+    reg         id_ex_wb_reg_en;
+    reg [ 4:0]  id_ex_rd_addr;
+    reg [ 2:0]  id_ex_sel;
+    reg         id_ex_is_branch_link;
+    reg [ 5:0]  id_ex_alu_op;
+    reg [ 4:0]  id_ex_rt_addr;
+    reg         id_ex_undefined_inst;
+    reg         id_ex_is_inst;
+    reg         id_ex_is_branch;
+    reg         id_ex_in_delay_slot;
+
+    // EX_MEM SIGNALS
+    // MASTER
+    reg 	        ex_mem_cp0_wen;
+    reg [7:0]       ex_mem_cp0_waddr;
+    reg [31:0]      ex_mem_cp0_wdata;
+    reg [31:0]      ex_mem_result;
+    reg [31:0]      ex_mem_rt_value;
+    reg [2:0]       ex_mem_size;
+    reg 	        ex_mem_unsigned_flag;
+    reg             ex_mem_is_inst;    
+    reg 	        ex_mem_invalid_instruction;
+    reg 	        ex_mem_syscall;
+    reg 	        ex_mem_break;
+    reg 	        ex_mem_eret;
+    reg 	        ex_mem_overflow;
+    reg 	        ex_mem_wen;
+    reg 	        ex_mem_in_delay_slot;
+    reg [31:0]      ex_mem_pc_address;
+    reg [31:0]      ex_mem_mem_address;
+    reg 	        ex_mem_branch_link;
+    reg             ex_mem_is_branch;
 
     pc pc_0(
         .clk                    (clk),
@@ -134,9 +206,9 @@ module sirius(
         .slave_ex_reg_en    (ex_reg_en),
         .slave_ex_addr      (ex_addr),
         .slave_ex_data      (ex_data),
-        .master_ex_reg_en   (master_ex_reg_en),
-        .master_ex_addr     (master_ex_addr),
-        .master_ex_data     (master_ex_data),
+        .master_ex_reg_en   (id_ex_wb_reg_en),
+        .master_ex_addr     (id_ex_wb_reg_dest),
+        .master_ex_data     (ex_result),
         .slave_mem_reg_en   (mem_reg_en),
         .slave_mem_addr     (mem_addr),
         .slave_mem_data     (mem_data),
@@ -152,9 +224,9 @@ module sirius(
         .slave_ex_reg_en    (ex_reg_en),
         .slave_ex_addr      (ex_addr),
         .slave_ex_data      (ex_data),
-        .master_ex_reg_en   (master_ex_reg_en),
-        .master_ex_addr     (master_ex_addr),
-        .master_ex_data     (master_ex_data),
+        .master_ex_reg_en   (id_ex_wb_reg_en),
+        .master_ex_addr     (id_ex_wb_reg_dest),
+        .master_ex_data     (ex_result),
         .slave_mem_reg_en   (mem_reg_en),
         .slave_mem_addr     (mem_addr),
         .slave_mem_data     (mem_data),
@@ -202,28 +274,6 @@ module sirius(
         .branch_address     (id_branch_address)
     );
 
-    // ID-EX SIGNALS
-    // MASTER
-    reg [31:0]  id_ex_pc_address;
-    reg [31:0]  id_ex_instruction;
-    reg [31:0]  id_ex_rs_value;
-    reg [31:0]  id_ex_rt_value;
-    reg [31:0]  id_ex_alu_src_a;
-    reg [31:0]  id_ex_alu_src_b;
-    reg [ 1:0]  id_ex_mem_type;
-    reg [ 2:0]  id_ex_mem_size;
-    reg         id_ex_mem_unsigned_flag;
-    reg [ 4:0]  id_ex_wb_reg_dest;
-    reg         id_ex_wb_reg_en;
-    reg [ 4:0]  id_ex_rd_addr;
-    reg [ 2:0]  id_ex_sel;
-    reg         id_ex_is_branch_link;
-    reg [ 5:0]  id_ex_alu_op;
-    reg [ 4:0]  id_ex_rt_addr;
-    reg         id_ex_undefined_inst;
-    reg         id_ex_is_inst;
-    reg         id_ex_in_delay_slot;
-
     always_ff @(posedge clk) begin
         if(rst || (!id_ex_en && ex_mem_en) || flush) begin
             id_ex_pc_address        <= 32'd0;
@@ -245,6 +295,7 @@ module sirius(
             id_ex_undefined_inst    <= 1'd0;
             id_ex_is_inst           <= 1'd0;
             id_ex_in_delay_slot     <= 1'd0;
+            id_ex_is_branch         <= 1'd0;
         end
         else if(id_ex_en) begin 
             id_ex_pc_address        <= if_pc_address;
@@ -266,7 +317,185 @@ module sirius(
             id_ex_undefined_inst    <= id_undefined_inst;
             id_ex_is_inst           <= if_id_is_instruction;
             id_ex_in_delay_slot     <= if_id_in_delay_slot;
+            id_ex_is_branch         <= id_is_branch_instr;
         end
     end
+
+    alu_alpha alu_alpha(
+        .clk                (clk),
+        .rst                (rst),
+        .flush_i            (flush),
+        .hilo_accessed      (id_is_hilo_accessed),
+        .alu_op             (id_ex_alu_op),
+        .src_a              (id_ex_alu_src_a),
+        .src_b              (id_ex_alu_src_b),
+        .rd                 (id_ex_rd_addr),
+        .sel                (id_ex_sel),
+        .cop0_addr          (ex_cop0_addr),
+        .cop0_data          (ex_cop0_data),
+        .cop0_wen           (ex_cop0_wen),
+        .exp_overflow       (ex_exp_overflow),
+        .exp_eret           (ex_exp_eret),
+        .exp_syscal         (ex_exp_syscal),
+        .exp_break          (ex_exp_break),
+        .result             (ex_result),
+        .stall_o            (ex_stall_o)
+    );
+
+    always_ff @(posedge clk) begin
+        if(rst || (!ex_mem_en && mem_wb_en) || flush) begin
+            ex_mem_cp0_wen              <= 1'b0;
+            ex_mem_cp0_waddr            <= 8'b0;
+            ex_mem_cp0_wdata            <= 32'd0;
+            ex_mem_result               <= 32'd0;
+            ex_mem_rt_value             <= 32'd0;
+            ex_mem_type                 <= 2'd0;
+            ex_mem_size                 <= 3'd0;
+            ex_mem_unsigned_flag        <= 1'b0;
+            ex_mem_invalid_instruction  <= 1'd0;
+            ex_mem_syscall              <= 1'd0;
+            ex_mem_break_               <= 1'd0;
+            ex_mem_eret                 <= 1'd0;
+            ex_mem_overflow             <= 1'd0;
+            ex_mem_wen                  <= 1'd0;
+            ex_mem_in_delay_slot        <= 1'd0;
+            ex_mem_pc_address           <= 32'd0;
+            ex_mem_mem_address          <= 32'd0;
+            ex_mem_wb_reg_dest          <= 5'd0;
+            ex_mem_wb_reg_en            <= 1'b0;
+            ex_mem_branch_link          <= 1'd0;
+            ex_mem_is_inst              <= 1'd0;
+            ex_mem_is_branch            <= 1'd0;
+        end
+        else if(ex_mem) begin 
+            ex_mem_cp0_wen              <= ex_cop0_wen;
+            ex_mem_cp0_waddr            <= ex_cop0_addr;
+            ex_mem_cp0_wdata            <= id_ex_rt_value;
+            ex_mem_result               <= ex_result;
+            ex_mem_rt_value             <= id_ex_rt_value;
+            ex_mem_type                 <= id_ex_mem_type;
+            ex_mem_size                 <= id_ex_mem_size;
+            ex_mem_unsigned_flag        <= id_ex_mem_unsigned_flag;
+            ex_mem_invalid_instruction  <= id_ex_undefined_inst;
+            ex_mem_syscall              <= ex_exp_syscal;
+            ex_mem_break_               <= ex_exp_break;
+            ex_mem_eret                 <= ex_exp_eret;
+            ex_mem_overflow             <= ex_exp_overflow;
+            ex_mem_wen                  <= id_ex_mem_type == `MEM_STOR;
+            ex_mem_in_delay_slot        <= id_ex_in_delay_slot;
+            ex_mem_pc_address           <= id_ex_pc_address;
+            ex_mem_mem_address          <= ex_result;
+            ex_mem_wb_reg_dest          <= id_ex_wb_reg_dest;
+            ex_mem_wb_reg_en            <= id_ex_wb_reg_en;
+            ex_mem_branch_link          <= id_ex_is_branch_link;
+            ex_mem_is_inst              <= id_ex_is_inst;
+            ex_mem_is_branch            <= id_ex_is_branch;
+        end
+    end
+
+    memory memory_0(
+        .clk                        (clk),
+        .rst                        (rst),
+        .address                    (ex_mem_mem_address),
+        .rt_value                   (ex_mem_rt_value),
+        .mem_type                   (ex_mem_type),
+        .mem_size                   (ex_mem_size),
+        .mem_signed                 (ex_mem_unsigned_flag),
+        .mem_en                     (data_en),
+        .mem_wen                    (data_wen),
+        .mem_addr                   (data_addr),
+        .mem_wdata                  (data_wdata),
+        .mem_rdata                  (data_data),
+        .result                     (mem_result),
+        .address_error              (mem_addr_error)
+    );
+
+    exception_alpha exception(
+        .clk                        (clk),
+        .rst                        (rst),
+        .iaddr_alignment_error      (|ex_mem_pc_address[1:0]),
+        .daddr_alignment_error      (mem_addr_error),
+        .invalid_instruction        (ex_mem_invalid_instruction),
+        .priv_instruction           (1'b0),
+        .syscall                    (ex_mem_syscall),
+        .break_                     (ex_mem_break),
+        .eret                       (ex_mem_eret),
+        .overflow                   (ex_mem_overflow),
+        .mem_wen                    (ex_mem_wen),
+        .is_branch_instruction      (ex_mem_is_branch),
+        .is_branch_slot             (ex_mem_in_delay_slot),
+        .pc_address                 (ex_mem_pc_address),
+        .mem_address                (data_addr),
+        .epc_address                (mem_cp0_epc_address),
+        .allow_interrupt            (mem_cp0_allow_interrupt),
+        .interrupt_flag             (mem_cp0_interrupt_flag),
+        .is_inst                    (ex_mem_is_inst),
+        .slave_exp_undefined_inst   (1'b0),
+        .slave_exp_overflow         (1'b0),
+        .exp_detect                 (flush),
+        .cp0_exp_en                 (mem_cp0_exp_en),
+        .cp0_exl_clean              (mem_cp0_exl_clean),
+        .cp0_exp_epc                (mem_cp0_exp_epc),
+        .cp0_exp_code               (mem_cp0_exp_code),
+        .cp0_exp_bad_vaddr          (mem_cp0_exp_badvaddr),
+        .cp0_exp_bad_vaddr_wen      (mem_cp0_exp_badvaddr_en),
+        .exp_pc_address             (mem_exception_address),
+        .cp0_exp_bd                 (mem_cp0_exp_bd)
+    );
+
+    cp0 coprocessor(
+        .clk                    (clk),
+        .rst                    (rst),
+        .hint                   (interrupt),
+        .raddr                  (ex_cop0_addr),
+        .rdata                  (ex_cop0_data),
+        .wen                    (ex_mem_cp0_wen),
+        .waddr                  (ex_mem_cp0_waddr),
+        .wdata                  (ex_mem_cp0_wdata),
+        .exp_en                 (mem_cp0_exp_en,
+        .exp_badvaddr_en        (mem_cp0_exp_badvaddr_en),
+        .exp_badvaddr           (mem_cp0_exp_badvaddr),
+        .exp_bd                 (mem_cp0_exp_bd),
+        .exp_code               (mem_cp0_exp_code),
+        .exp_epc                (mem_cp0_exp_epc),
+        .exl_clean              (mem_cp0_exl_clean),
+        .epc_address            (mem_cp0_epc_address),
+        .allow_interrupt        (mem_cp0_allow_interrupt),
+        .interrupt_flag         (mem_cp0_interrupt_flag)
+    );
+
+    reg [31:0]      mem_wb_result, mem_wb_pc_address;
+    reg [4:0]       mem_wb_reg_dest;
+    reg             mem_wb_reg_write_en;
+    reg             mem_wb_branch_link;
+    always_ff @(posedge clk) begin
+        if(rst || !mem_wb_en) begin
+            mem_wb_result <= 32'd0;
+            mem_wb_pc_address <= 32'd0;
+            mem_wb_reg_dest <= 5'd0;
+            mem_wb_reg_write_en <= 1'd0;
+            mem_wb_branch_link <= 1'd0;
+        end
+        else begin
+            mem_wb_result <= mem_result;
+            mem_wb_pc_address <= ex_mem_pc_address;
+            mem_wb_reg_dest <= ex_mem_wb_reg_dest;
+            mem_wb_reg_write_en <= ex_mem_wb_reg_en;
+            mem_wb_branch_link <= ex_mem_branch_link;
+        end
+    end
+
+    writeback_alpha writeback_0(
+        .clk                    (clk),
+        .rst                    (rst),
+        .result                 (mem_wb_result),
+        .pc_address             (mem_wb_pc_address),
+        .reg_dest               (mem_wb_reg_dest),
+        .write_en               (mem_wb_reg_write_en),
+        .branch_link            (mem_wb_branch_link),
+        .reg_write_en           (wb_reg_write_en),
+        .reg_write_dest         (wb_reg_write_dest),
+        .reg_write_data         (wb_reg_write_data)
+    );
 
 endmodule

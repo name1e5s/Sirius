@@ -11,7 +11,6 @@ module cp0(
         input                       wen,
         input [7:0]                 waddr,
         input [31:0]                wdata,
-        input                       ex_mem_stall,
 
         // Exceptions
         input                       exp_en,
@@ -68,7 +67,7 @@ module cp0(
         else begin
             Cause[15:10] <= hint;
             Count <= Count + 33'd1;
-            if(wen && !ex_mem_stall) begin
+            if(wen) begin
                 unique case(waddr)
                     { 5'd9, 3'd0 }:
                         Count <= {wdata, 1'b0};
@@ -85,7 +84,7 @@ module cp0(
                     end
                 endcase
             end
-            if(exp_en && !ex_mem_stall) begin
+            if(exp_en) begin
                 if(exp_badvaddr_en)
                     BadVAddr <= exp_badvaddr;
                 Status[1] <= ~exl_clean;

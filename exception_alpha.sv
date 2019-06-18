@@ -2,8 +2,6 @@
 module exception_alpha(
         input                       clk,
         input                       rst,
-        
-        input                       ex_mem_stall,
 
         input                       iaddr_alignment_error,
         input                       daddr_alignment_error,
@@ -15,6 +13,7 @@ module exception_alpha(
         input                       overflow,
         input                       mem_wen,
         input                       is_branch_instruction,
+        input                       is_branch_slot,
         input [31:0]                pc_address,
         input [31:0]                mem_address,
         input [31:0]                epc_address,
@@ -34,15 +33,6 @@ module exception_alpha(
         output logic [31:0]         exp_pc_address,
         output logic                cp0_exp_bd
 );
-
-    reg  is_branch_slot;
-
-    always_ff @(posedge clk) begin : check_is_delay_slot
-        if(rst || (!ex_mem_stall && exp_detect))
-            is_branch_slot <= 1'b0;
-        else if(!ex_mem_stall && is_inst)
-            is_branch_slot <= is_branch_instruction;
-    end
     
     always_comb begin : check_exceotion
         exp_pc_address = 32'hbfc00380;
