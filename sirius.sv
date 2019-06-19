@@ -28,6 +28,9 @@ module sirius(
     wire                if_en, if_id_en, id_ex_en, ex_mem_en, mem_wb_en;
     wire                flush;
 
+    wire                fifo_full;
+    assign              if_en = !fifo_full;
+
     // IF SIGNALS
     wire [31:0]         if_pc_address;
     wire [31:0]         if_pc_slave_address = if_pc_address + 32'd4;
@@ -93,6 +96,9 @@ module sirius(
     wire [31:0]         ex_result;
     wire                ex_stall_o;
 
+    wire                ex_exp_overflow_slave;
+    wire [31:0]         ex_result_slave;
+
     // MEM SIGNALS
     wire                mem_exception_taken = flush;
     wire [31:0]         mem_exception_address;
@@ -113,6 +119,10 @@ module sirius(
     wire                wb_reg_write_en;
     wire [4:0]          wb_reg_write_dest;
     wire [31:0]         wb_reg_write_data;
+
+    wire                wb_reg_write_en_slave;
+    wire [4:0]          wb_reg_write_dest_slave;
+    wire [31:0]         wb_reg_write_data_slave;
 
     // IF-ID SIGNALS
     wire [31:0]          if_id_pc_address;
@@ -147,6 +157,14 @@ module sirius(
     reg             id_ex_is_branch;
     reg             id_ex_in_delay_slot;
 
+    // SLAVE
+    reg [31:0]      id_ex_pc_address_slave;
+    reg [31:0]      id_ex_alu_src_a_slave;
+    reg [31:0]      id_ex_alu_src_b_slave;
+    reg [ 4:0]      id_ex_wb_reg_dest_slave;
+    reg             id_ex_wb_reg_en_slave;
+    reg [ 5:0]      id_ex_alu_op_slave;
+
     // EX_MEM SIGNALS
     // MASTER
     reg 	        ex_mem_cp0_wen;
@@ -173,11 +191,24 @@ module sirius(
     reg [1:0]       ex_mem_type;
     reg [2:0]       ex_mem_size;
 
+    // SLAVE
+    reg [31:0]      ex_mem_pc_address_slave;
+    reg [31:0]      ex_mem_result_slave;
+    reg [ 4:0]      ex_mem_wb_reg_dest_slave;
+    reg             ex_mem_wb_reg_en_slave;
+    reg             ex_mem_overflow_slave;
+
     // MEM_WB SIGNALS
     reg [31:0]      mem_wb_result, mem_wb_pc_address;
     reg [4:0]       mem_wb_reg_dest;
     reg             mem_wb_reg_write_en;
     reg             mem_wb_branch_link;
+
+    // SLAVE
+    reg [31:0]      mem_wb_pc_address_slave;
+    reg [31:0]      mem_wb_result_slave;
+    reg [ 4:0]      mem_wb_reg_dest_slave;
+    reg             mem_wb_reg_en_slave;
 
     // Global components
     pipe_ctrl pipe_ctrl0(
@@ -207,13 +238,13 @@ module sirius(
         .wen1_a                 (wb_reg_write_en),
         .waddr1_a               (wb_reg_write_dest),
         .wdata1_a               (wb_reg_write_data),
-        .raddr2_a               (),
-        .rdata2_a               (),
-        .raddr2_b               (),
-        .rdata2_b               (),
-        .wen2_a                 (),
-        .waddr2_a               (),
-        .wdata2_a               ()
+        .raddr2_a               (id_rs_slave),
+        .rdata2_a               (reg_rs_data_slave),
+        .raddr2_b               (id_rt_slave),
+        .rdata2_b               (reg_rt_data_slave),
+        .wen2_a                 (wb_reg_write_en_slave),
+        .waddr2_a               (wb_reg_write_dest_slave),
+        .wdata2_a               (wb_reg_write_data_slave)
     );
 
     pc pc_0(
@@ -248,7 +279,7 @@ module sirius(
         .delay_slot_out1        (if_id_in_delay_slot),
         .empty                  (if_id_fifo_empty),
         .almost_empty           (if_id_fifo_almost_empty),
-        .full                   ()
+        .full                   (fifo_full)
     );
 
     decoder_alpha decoder_master(
@@ -324,15 +355,15 @@ module sirius(
     );
 
     forwarding_unit forwarding_rs(
-        .slave_ex_reg_en    (ex_reg_en),
-        .slave_ex_addr      (ex_addr),
+        .slave_ex_reg_en    (id_ex_wb_reg_en_slave),
+        .slave_ex_addr      (id_ex_wb_reg_dest_slave),
         .slave_ex_data      (ex_data),
         .master_ex_reg_en   (id_ex_wb_reg_en),
         .master_ex_addr     (id_ex_wb_reg_dest),
-        .master_ex_data     (ex_result),
-        .slave_mem_reg_en   (ex_mem_wb_reg_en),
-        .slave_mem_addr     (ex_mem_wb_reg_dest),
-        .slave_mem_data     (mem_result),
+        .master_ex_data     (ex_result_slave),
+        .slave_mem_reg_en   (ex_mem_wb_reg_en_slave),
+        .slave_mem_addr     (ex_mem_wb_reg_dest_slave),
+        .slave_mem_data     (ex_mem_result_slave),
         .master_mem_reg_en  (ex_mem_wb_reg_en),
         .master_mem_addr    (ex_mem_wb_reg_dest),
         .master_mem_data    (mem_result),
@@ -342,15 +373,15 @@ module sirius(
     );
 
     forwarding_unit forwarding_rt(
-        .slave_ex_reg_en    (ex_reg_en),
-        .slave_ex_addr      (ex_addr),
+        .slave_ex_reg_en    (id_ex_wb_reg_en_slave),
+        .slave_ex_addr      (id_ex_wb_reg_dest_slave),
         .slave_ex_data      (ex_data),
         .master_ex_reg_en   (id_ex_wb_reg_en),
         .master_ex_addr     (id_ex_wb_reg_dest),
-        .master_ex_data     (ex_result),
-        .slave_mem_reg_en   (ex_mem_wb_reg_en),
-        .slave_mem_addr     (ex_mem_wb_reg_dest),
-        .slave_mem_data     (mem_result),
+        .master_ex_data     (ex_result_slave),
+        .slave_mem_reg_en   (ex_mem_wb_reg_en_slave),
+        .slave_mem_addr     (ex_mem_wb_reg_dest_slave),
+        .slave_mem_data     (ex_mem_result_slave),
         .master_mem_reg_en  (ex_mem_wb_reg_en),
         .master_mem_addr    (ex_mem_wb_reg_dest),
         .master_mem_data    (mem_result),
@@ -360,15 +391,15 @@ module sirius(
     );
 
     forwarding_unit forwarding_rs_slave(
-        .slave_ex_reg_en    (ex_reg_en),
-        .slave_ex_addr      (ex_addr),
+        .slave_ex_reg_en    (id_ex_wb_reg_en_slave),
+        .slave_ex_addr      (id_ex_wb_reg_dest_slave),
         .slave_ex_data      (ex_data),
         .master_ex_reg_en   (id_ex_wb_reg_en),
         .master_ex_addr     (id_ex_wb_reg_dest),
-        .master_ex_data     (ex_result),
-        .slave_mem_reg_en   (ex_mem_wb_reg_en),
-        .slave_mem_addr     (ex_mem_wb_reg_dest),
-        .slave_mem_data     (mem_result),
+        .master_ex_data     (ex_result_slave),
+        .slave_mem_reg_en   (ex_mem_wb_reg_en_slave),
+        .slave_mem_addr     (ex_mem_wb_reg_dest_slave),
+        .slave_mem_data     (ex_mem_result_slave),
         .master_mem_reg_en  (ex_mem_wb_reg_en),
         .master_mem_addr    (ex_mem_wb_reg_dest),
         .master_mem_data    (mem_result),
@@ -378,15 +409,15 @@ module sirius(
     );
 
     forwarding_unit forwarding_rt_slave(
-        .slave_ex_reg_en    (ex_reg_en),
-        .slave_ex_addr      (ex_addr),
+        .slave_ex_reg_en    (id_ex_wb_reg_en_slave),
+        .slave_ex_addr      (id_ex_wb_reg_dest_slave),
         .slave_ex_data      (ex_data),
         .master_ex_reg_en   (id_ex_wb_reg_en),
         .master_ex_addr     (id_ex_wb_reg_dest),
-        .master_ex_data     (ex_result),
-        .slave_mem_reg_en   (ex_mem_wb_reg_en),
-        .slave_mem_addr     (ex_mem_wb_reg_dest),
-        .slave_mem_data     (mem_result),
+        .master_ex_data     (ex_result_slave),
+        .slave_mem_reg_en   (ex_mem_wb_reg_en_slave),
+        .slave_mem_addr     (ex_mem_wb_reg_dest_slave),
+        .slave_mem_data     (ex_mem_result_slave),
         .master_mem_reg_en  (ex_mem_wb_reg_en),
         .master_mem_addr    (ex_mem_wb_reg_dest),
         .master_mem_data    (mem_result),
@@ -432,6 +463,29 @@ module sirius(
             end
             default:
                 id_alu_src_b = rt_value;
+        endcase
+    end
+
+    logic [31:0] id_alu_src_a_slave, id_alu_src_b_slave;
+    always_comb begin : get_alu_src_a_slave
+        if(id_alu_src_slave == `SRC_SFT)
+            id_alu_src_a_slave = { 27'd0 ,id_shamt};
+        else if(id_alu_src == `SRC_PCA)
+            id_alu_src_a_slave = if_id_pc_address + 32'd8;
+        else
+            id_alu_src_a_slave = rs_value_slave;
+    end
+
+    always_comb begin: get_alu_src_b_slave
+        unique case(id_alu_src_slave)
+            `SRC_IMM: begin
+            if(id_alu_imm_src_slave)
+                id_alu_src_b_slave = { 16'd0, id_immediate_slave };
+            else
+                id_alu_src_b_slave = { {16{id_immediate_slave[15]}}, id_immediate_slave};
+            end
+            default:
+                id_alu_src_b_slave = rt_value_slave;
         endcase
     end
 
@@ -494,6 +548,25 @@ module sirius(
         end
     end
 
+    always_ff @(posedge clk) begin
+        if(rst || (!id_ex_en && ex_mem_en) || flush || !id_enable_slave) begin
+            id_ex_pc_address_slave  <= 32'd0;
+            id_ex_alu_src_a_slave   <= 32'd0;
+            id_ex_alu_src_b_slave   <= 32'd0;
+            id_ex_wb_reg_dest_slave <= 5'd0;
+            id_ex_wb_reg_en_slave   <= 1'd0;
+            id_ex_alu_op_slave      <= 6'd0;
+        end
+        else if(id_ex_en) begin
+            id_ex_pc_address_slave  <= if_id_pc_address_slave;
+            id_ex_alu_src_a_slave   <= id_alu_src_a_slave;
+            id_ex_alu_src_b_slave   <= id_alu_src_b_slave;
+            id_ex_wb_reg_dest_slave <= id_wb_reg_dest_slave;
+            id_ex_wb_reg_en_slave   <= id_wb_reg_en_slave;
+            id_ex_alu_op_slave      <= id_alu_op_slave;
+        end
+    end
+
     alu_alpha alu_alpha(
         .clk                (clk),
         .rst                (rst),
@@ -513,6 +586,16 @@ module sirius(
         .exp_break          (ex_exp_break),
         .result             (ex_result),
         .stall_o            (ex_stall_o)
+    );
+
+    alu_beta alu_beta(
+        .clk                (clk),
+        .rst                (rst),
+        .alu_op             (id_ex_alu_op_slave),
+        .src_a              (id_ex_alu_src_a_slave),
+        .src_b              (id_ex_alu_src_b_slave),
+        .exp_overflow       (ex_exp_overflow_slave),
+        .result             (ex_result_slave)
     );
 
     always_ff @(posedge clk) begin
@@ -540,7 +623,7 @@ module sirius(
             ex_mem_is_inst              <= 1'd0;
             ex_mem_is_branch            <= 1'd0;
         end
-        else if(ex_mem) begin 
+        else if(ex_mem_en) begin 
             ex_mem_cp0_wen              <= ex_cop0_wen;
             ex_mem_cp0_waddr            <= ex_cop0_addr;
             ex_mem_cp0_wdata            <= id_ex_rt_value;
@@ -565,6 +648,24 @@ module sirius(
             ex_mem_is_branch            <= id_ex_is_branch;
         end
     end
+
+    always_ff @(posedge clk) begin
+        if(rst || (!ex_mem_en && mem_wb_en) || flush) begin
+            ex_mem_pc_address_slave <= 32'd0;
+            ex_mem_result_slave     <= 32'd0;
+            ex_mem_wb_reg_dest_slave<= 5'd0;
+            ex_mem_wb_reg_en_slave  <= 1'd0;
+            ex_mem_overflow_slave   <= 1'd0;
+        end
+        else if(ex_mem_en) begin
+            ex_mem_pc_address_slave <= id_ex_pc_address_slave;
+            ex_mem_result_slave     <= ex_result_slave;
+            ex_mem_wb_reg_dest_slave<= id_ex_wb_reg_dest_slave;
+            ex_mem_wb_reg_en_slave  <= id_ex_wb_reg_en_slave;
+            ex_mem_overflow_slave   <= ex_exp_overflow_slave;
+        end
+    end 
+
 
     memory memory_0(
         .clk                        (clk),
@@ -604,7 +705,7 @@ module sirius(
         .interrupt_flag             (mem_cp0_interrupt_flag),
         .is_inst                    (ex_mem_is_inst),
         .slave_exp_undefined_inst   (1'b0),
-        .slave_exp_overflow         (1'b0),
+        .slave_exp_overflow         (ex_exp_overflow_slave),
         .exp_detect                 (flush),
         .cp0_exp_en                 (mem_cp0_exp_en),
         .cp0_exl_clean              (mem_cp0_exl_clean),
@@ -654,6 +755,21 @@ module sirius(
         end
     end
 
+    always_ff @(posedge clk) begin
+        if(rst || !mem_wb_en || flush) begin
+            mem_wb_result_slave <= 32'd0;
+            mem_wb_pc_address_slave <= 32'd0;
+            mem_wb_reg_dest_slave <= 5'd0;
+            mem_wb_reg_en_slave <= 1'd0;
+        end
+        else begin
+            mem_wb_result_slave <= ex_mem_result_slave;
+            mem_wb_pc_address_slave <= ex_mem_pc_address_slave;
+            mem_wb_reg_dest_slave <= ex_mem_wb_reg_dest_slave;
+            mem_wb_reg_en_slave <= ex_mem_wb_reg_en_slave;
+        end
+    end
+
     writeback_alpha writeback_0(
         .clk                    (clk),
         .rst                    (rst),
@@ -665,6 +781,15 @@ module sirius(
         .reg_write_en           (wb_reg_write_en),
         .reg_write_dest         (wb_reg_write_dest),
         .reg_write_data         (wb_reg_write_data)
+    );
+
+    writeback_beta writeback_1(
+        .result                 (mem_wb_result_slave),
+        .reg_dest               (mem_wb_reg_dest_slave),
+        .write_en               (mem_wb_reg_en_slave),
+        .reg_write_en           (wb_reg_write_en_slave),
+        .reg_write_dest         (wb_reg_write_dest_slave),
+        .reg_write_data         (wb_reg_write_data_slave)
     );
 
 endmodule
