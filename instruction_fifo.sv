@@ -3,6 +3,7 @@
 module instruction_fifo(
         input                       clk,
         input                       rst,
+        input                       rst_with_delay,
 
         // Read inputs
         input                       read_en1,
@@ -21,11 +22,16 @@ module instruction_fifo(
         output logic [31:0]         data_out2,
         output logic [31:0]         address_out1,
         output logic [31:0]         address_out2,
+        output logic                delay_slot_out1,
         output logic                empty,
         output logic                almost_empty,
         output logic                full
 );
 
+    // Reset status
+    reg         in_delay_slot;
+    reg [31:0]  delayed_data;
+    reg [31:0]  delayed_pc;
     // Store data here
     reg [31:0]  data[0:15];
     reg [31:0]  address[0:15];
@@ -41,10 +47,54 @@ module instruction_fifo(
     assign almost_empty = (data_count == 4'd1);
 
     // Output data
-    assign data_out1 = data[read_pointer];
-    assign data_out2 = data[read_pointer + 4'd1];
-    assign address_out1 = address[read_pointer];
-    assign address_out2 = address[read_pointer + 4'd1];
+    wire [31:0] _data_out1 = data[read_pointer];
+    wire [31:0] _data_out2 = data[read_pointer + 4'd1];
+    wire [31:0] _address_out1 = address[read_pointer];
+    wire [31:0] _address_out2 = address[read_pointer + 4'd1];
+
+    always_comb begin : select_output
+        if(in_delay_slot) begin
+            data_out1       = delayed_data;
+            data_out2       = 32'd0;
+            address_out1    = delayed_pc;
+            address_out2    = 32'd0;
+            delay_slot_out1 = 1'd1;
+        end
+        else if(empty) begin
+            data_out1       = 32'd0;
+            data_out2       = 32'd0;
+            address_out1    = 32'd0;
+            address_out2    = 32'd0;
+            delay_slot_out1 = 1'd1;
+        end
+        else if(almost_empty) begin
+            data_out1       = _data_out1;
+            data_out2       = 32'd0;
+            address_out1    = _address_out1;
+            address_out2    = 32'd0;
+            delay_slot_out1 = 1'd9;
+        end 
+        else begin
+            data_out1       = _data_out1;
+            data_out2       = _data_out2;
+            address_out1    = _address_out1;
+            address_out2    = _address_out2;
+            delay_slot_out1 = 1'd0;
+        end
+    end
+
+    always_ff @(posedge clk) begin : update_delayed
+        if(rst && rst_with_delay) begin
+            in_delay_slot   <= 1'd1;
+            delayed_data    <= data[read_pointer + 4'd1];;
+            delayed_pc      <= address[read_pointer + 4'd1];;
+        end
+        else begin
+            in_delay_slot   <= 1'd0;
+            delayed_data    <= 32'd0;
+            delayed_pc      <= 32'd0;
+        end
+    end
 
     always_ff @(posedge clk iff rst == 0, posedge rst) begin : update_write_pointer
         if(rst)
