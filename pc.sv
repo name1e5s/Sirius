@@ -19,7 +19,7 @@ module pc(
     logic   [31:0] pc_address_next;
 
     always_comb begin : compute_next_pc_address
-        if(rst) begin
+        if(rst)
             pc_address_next = 32'hbfc0_0000; // Initial valud
         else if(pc_en) begin
             if(exception_taken)

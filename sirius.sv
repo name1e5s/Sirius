@@ -1,6 +1,7 @@
 `timescale 1ns / 1ps
 
 // The pipeline
+// Todo: isolate hilo register
 module sirius(
         input                   clk,
         input                   rst,
@@ -172,7 +173,6 @@ module sirius(
     reg [31:0]      ex_mem_cp0_wdata;
     reg [31:0]      ex_mem_result;
     reg [31:0]      ex_mem_rt_value;
-    reg [2:0]       ex_mem_size;
     reg 	        ex_mem_unsigned_flag;
     reg             ex_mem_is_inst;    
     reg 	        ex_mem_invalid_instruction;
@@ -262,8 +262,8 @@ module sirius(
 
     instruction_fifo instruction_fifo_0(
         .clk                    (clk),
-        .rst                    (rst || flush || branch_taken),
-        .rst_with_delay         (branch_taken && ~id_enable_slave),
+        .rst                    (rst || flush || id_branch_taken),
+        .rst_with_delay         (id_branch_taken && ~id_enable_slave),
         .read_en1               (if_id_en),
         .read_en2               (id_enable_slave),
         .write_en1              (inst_ok & inst_ok_1),
@@ -357,7 +357,7 @@ module sirius(
     forwarding_unit forwarding_rs(
         .slave_ex_reg_en    (id_ex_wb_reg_en_slave),
         .slave_ex_addr      (id_ex_wb_reg_dest_slave),
-        .slave_ex_data      (ex_data),
+        .slave_ex_data      (ex_result),
         .master_ex_reg_en   (id_ex_wb_reg_en),
         .master_ex_addr     (id_ex_wb_reg_dest),
         .master_ex_data     (ex_result_slave),
@@ -375,7 +375,7 @@ module sirius(
     forwarding_unit forwarding_rt(
         .slave_ex_reg_en    (id_ex_wb_reg_en_slave),
         .slave_ex_addr      (id_ex_wb_reg_dest_slave),
-        .slave_ex_data      (ex_data),
+        .slave_ex_data      (ex_result),
         .master_ex_reg_en   (id_ex_wb_reg_en),
         .master_ex_addr     (id_ex_wb_reg_dest),
         .master_ex_data     (ex_result_slave),
@@ -393,7 +393,7 @@ module sirius(
     forwarding_unit forwarding_rs_slave(
         .slave_ex_reg_en    (id_ex_wb_reg_en_slave),
         .slave_ex_addr      (id_ex_wb_reg_dest_slave),
-        .slave_ex_data      (ex_data),
+        .slave_ex_data      (ex_result),
         .master_ex_reg_en   (id_ex_wb_reg_en),
         .master_ex_addr     (id_ex_wb_reg_dest),
         .master_ex_data     (ex_result_slave),
@@ -411,7 +411,7 @@ module sirius(
     forwarding_unit forwarding_rt_slave(
         .slave_ex_reg_en    (id_ex_wb_reg_en_slave),
         .slave_ex_addr      (id_ex_wb_reg_dest_slave),
-        .slave_ex_data      (ex_data),
+        .slave_ex_data      (ex_result),
         .master_ex_reg_en   (id_ex_wb_reg_en),
         .master_ex_addr     (id_ex_wb_reg_dest),
         .master_ex_data     (ex_result_slave),
@@ -542,7 +542,7 @@ module sirius(
             id_ex_alu_op            <= id_alu_op;
             id_ex_rt_addr           <= id_rt;
             id_ex_undefined_inst    <= id_undefined_inst;
-            id_ex_is_inst           <= if_id_is_instruction;
+            id_ex_is_inst           <= if_id_en;
             id_ex_in_delay_slot     <= if_id_in_delay_slot;
             id_ex_is_branch         <= id_is_branch_instr;
         end
@@ -692,7 +692,7 @@ module sirius(
         .invalid_instruction        (ex_mem_invalid_instruction),
         .priv_instruction           (1'b0),
         .syscall                    (ex_mem_syscall),
-        .break_                     (ex_mem_break),
+        .break_                     (ex_mem_break_),
         .eret                       (ex_mem_eret),
         .overflow                   (ex_mem_overflow),
         .mem_wen                    (ex_mem_wen),
@@ -726,7 +726,7 @@ module sirius(
         .wen                    (ex_mem_cp0_wen),
         .waddr                  (ex_mem_cp0_waddr),
         .wdata                  (ex_mem_cp0_wdata),
-        .exp_en                 (mem_cp0_exp_en,
+        .exp_en                 (mem_cp0_exp_en),
         .exp_badvaddr_en        (mem_cp0_exp_badvaddr_en),
         .exp_badvaddr           (mem_cp0_exp_badvaddr),
         .exp_bd                 (mem_cp0_exp_bd),
