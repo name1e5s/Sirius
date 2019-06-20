@@ -65,14 +65,14 @@ module instruction_fifo(
             data_out2       = 32'd0;
             address_out1    = 32'd0;
             address_out2    = 32'd0;
-            delay_slot_out1 = 1'd1;
+            delay_slot_out1 = 1'd0;
         end
         else if(almost_empty) begin
             data_out1       = _data_out1;
             data_out2       = 32'd0;
             address_out1    = _address_out1;
             address_out2    = 32'd0;
-            delay_slot_out1 = 1'd9;
+            delay_slot_out1 = 1'd0;
         end 
         else begin
             data_out1       = _data_out1;
@@ -110,6 +110,8 @@ module instruction_fifo(
     always_ff @(posedge clk iff rst == 0, posedge rst) begin : update_read_pointer
         if(rst)
             read_pointer <= 4'd0;
+        else if(empty)
+            read_pointer <= read_pointer;
         else if(read_en1 && read_en2)
             read_pointer <= read_pointer + 4'd2;
         else if(read_en1)
@@ -121,15 +123,15 @@ module instruction_fifo(
     always_ff @(posedge clk iff rst == 0, posedge rst) begin : update_counter
         if(rst)
             data_count <= 4'd0;
-        else if((write_en1 && (!read_en1) && (!read_en2)) &&
-                (write_en1 && write_en2 && read_en1 && (!read_en2)))
+        else if((write_en1 && (!write_en2) && (((!read_en1) && (!read_en2)) || empty)) ||
+                (write_en1 && write_en2 && (read_en1 && (!read_en2))))
             data_count <= data_count + 4'd1;
-        else if(write_en1 && write_en2 && (!read_en1) && (!read_en2))
+        else if(write_en1 && write_en2 && (((!read_en1) && (!read_en2)) || empty))
             data_count <= data_count + 4'd2;
-        else if((read_en1 && (!write_en1) && (!write_en2)) &&
-                (read_en1 && read_en2 && (write_en1) && (!write_en2)))
+        else if(((read_en1 && (!read_en1) && (!write_en1) && (!write_en2)) ||
+                (read_en1 && read_en2 && (write_en1) && (!write_en2))) && (!empty))
             data_count <= data_count - 4'd1;
-        else if(read_en1 && read_en2 && (!write_en1) && (!write_en2))
+        else if((read_en1 && read_en2 && (!write_en1) && (!write_en2)) && (!empty))
             data_count <= data_count - 4'd2;
     end
 
@@ -143,5 +145,5 @@ module instruction_fifo(
             address[write_pointer + 4'd1] <= write_address2;
         end
     end
-
+    
 endmodule
