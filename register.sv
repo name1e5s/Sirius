@@ -79,7 +79,7 @@ module register(
 			for(int i = 0; i < 31; i++)
 				_register[i] <= 32'h0000_0000;
 		end
-		else if(wenable_a) begin
+		else begin
             if(wen1_a && wen2_a && waddr1_a == waddr2_a)
                 _register[waddr2_a] <= wdata2_a;
             else begin
@@ -89,8 +89,5 @@ module register(
                     _register[waddr2_a] <= wdata2_a;
             end
         end
-		else begin
-			// Nothing happend, make vivado happy.
-		end
 	end
 endmodule

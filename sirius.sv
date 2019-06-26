@@ -208,9 +208,14 @@ module sirius(
     reg [31:0]      mem_wb_result_slave;
     reg [ 4:0]      mem_wb_reg_dest_slave;
     reg             mem_wb_reg_en_slave;
+    
+    assign              inst_en = ~fifo_full;
+    assign              inst_addr = if_pc_address;
 
     // Global components
     pipe_ctrl pipe_ctrl0(
+        .icache_stall           (inst_en & (~inst_ok)),
+        .id_branch_taken        (id_branch_taken),
         .ex_stall               (ex_stall_o),
         .mem_stall              (data_en & ~data_ok),
         .id_ex_alu_op           (id_ex_alu_op),
@@ -299,7 +304,7 @@ module sirius(
         .is_hilo_accessed       (id_is_hilo_accessed)
     );
 
-    decoder_crtl conrtol_master(
+    decoder_ctrl conrtol_master(
         .instruction            (if_id_instruction),
         .opcode                 (id_opcode),
         .rt                     (id_rt),
@@ -335,7 +340,7 @@ module sirius(
         .is_hilo_accessed       (id_is_hilo_accessed_slave)
     );
 
-    decoder_crtl conrtol_slave(
+    decoder_ctrl conrtol_slave(
         .instruction            (if_id_instruction_slave),
         .opcode                 (id_opcode_slave),
         .rt                     (id_rt_slave),

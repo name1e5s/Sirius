@@ -35,15 +35,16 @@ module pipe_ctrl(
             en = 5'b00011;
         else if(ex_stall || (id_ex_alu_op == `ALU_MFC0 && ex_mem_cp0_wen))
             en = 5'b10001;
-        else if(id_ex_mem_type == `MEM_LOAD ||
-                (id_ex_mem_wb_reg_dest == id_rs) ||
-                (id_ex_mem_wb_reg_dest == id_rt))
+        else if(id_ex_mem_type == `MEM_LOAD &&
+                ((id_ex_mem_wb_reg_dest == id_rs) ||
+                (id_ex_mem_wb_reg_dest == id_rt)))
             en = 5'b10011;
-        else if(ex_mem_mem_type == `MEM_LOAD ||
-                (ex_mem_mem_wb_reg_dest == id_rs) ||
-                (ex_mem_mem_wb_reg_dest == id_rt))
+        else if(ex_mem_mem_type == `MEM_LOAD &&
+                ((ex_mem_mem_wb_reg_dest == id_rs) ||
+                (ex_mem_mem_wb_reg_dest == id_rt)))
             en = 5'b10011;
         else
             en = 5'b11111;
     end
+    
 endmodule

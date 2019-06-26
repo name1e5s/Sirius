@@ -18,6 +18,8 @@ module pc(
 
     reg     [31:0] real_pc_address;
     logic   [31:0] pc_address_next;
+    
+    assign pc_address = real_pc_address;
 
     always_comb begin : compute_next_pc_address
         if(rst)
@@ -40,7 +42,7 @@ module pc(
     end
 
     always_ff @(posedge clk) begin
-        real_pc_address <= pc_address;
+        real_pc_address <= pc_address_next;
     end
     
 endmodule

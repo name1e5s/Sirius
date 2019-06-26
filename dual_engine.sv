@@ -21,7 +21,8 @@ module dual_engine(
         input                   enable_master,
         output logic            enable_slave
 );
-
+    assign enable_slave = 1'd0;
+/*
     wire fifo = ~(fifo_empty || fifo_almost_empty);
     always_comb begin : check_slave_enable
         if((!enable_master) || (id_priv_inst_master) || 
@@ -43,4 +44,5 @@ module dual_engine(
             end
         end 
     end
+    */
 endmodule

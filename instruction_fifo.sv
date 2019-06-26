@@ -86,8 +86,8 @@ module instruction_fifo(
     always_ff @(posedge clk) begin : update_delayed
         if(rst && rst_with_delay) begin
             in_delay_slot   <= 1'd1;
-            delayed_data    <= data[read_pointer + 4'd1];;
-            delayed_pc      <= address[read_pointer + 4'd1];;
+            delayed_data    <= read_pointer + 4'd1 == write_pointer? write_data1 : data[read_pointer + 4'd1];;
+            delayed_pc      <= read_pointer + 4'd1 == write_pointer? write_address1 : address[read_pointer + 4'd1];;
         end
         else begin
             in_delay_slot   <= 1'd0;
@@ -96,18 +96,16 @@ module instruction_fifo(
         end
     end
 
-    always_ff @(posedge clk iff rst == 0, posedge rst) begin : update_write_pointer
+    always_ff @(posedge clk) begin : update_write_pointer
         if(rst)
             write_pointer <= 4'd0;
         else if(write_en1 && write_en2)
             write_pointer <= write_pointer + 4'd2;
         else if(write_en1)
             write_pointer <= write_pointer + 4'd1;
-        else
-            write_pointer <= write_pointer;
     end
 
-    always_ff @(posedge clk iff rst == 0, posedge rst) begin : update_read_pointer
+    always_ff @(posedge clk) begin : update_read_pointer
         if(rst)
             read_pointer <= 4'd0;
         else if(empty)
@@ -116,11 +114,9 @@ module instruction_fifo(
             read_pointer <= read_pointer + 4'd2;
         else if(read_en1)
             read_pointer <= read_pointer + 4'd1;
-        else
-            read_pointer <= read_pointer;
     end
 
-    always_ff @(posedge clk iff rst == 0, posedge rst) begin : update_counter
+    always_ff @(posedge clk) begin : update_counter
         if(rst)
             data_count <= 4'd0;
         else if((write_en1 && (!write_en2) && (((!read_en1) && (!read_en2)) || empty)) ||
@@ -135,7 +131,7 @@ module instruction_fifo(
             data_count <= data_count - 4'd2;
     end
 
-    always_ff @(posedge clk iff rst == 1'd0) begin : write_data 
+    always_ff @(posedge clk) begin : write_data 
         if(write_en1) begin
             data[write_pointer] <= write_data1;
             address[write_pointer] <= write_address1;
