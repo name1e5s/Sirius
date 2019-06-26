@@ -6,6 +6,7 @@ module pc(
         input                   pc_en,
         input                   inst_ok_1,
         input                   inst_ok_2,
+        input                   fifo_full,
 
         input                   branch_taken,
         input [31:0]            branch_address,
@@ -26,6 +27,8 @@ module pc(
                 pc_address_next = exception_address;
             else if(branch_taken)
                 pc_address_next = branch_address;
+            else if(fifo_full)
+                pc_address_next = pc_address;
             else if(inst_ok_1 && inst_ok_2)
                 pc_address_next = pc_address + 32'd8;
             else if(inst_ok_1)

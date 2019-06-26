@@ -30,7 +30,6 @@ module sirius(
     wire                flush;
 
     wire                fifo_full;
-    assign              if_en = !fifo_full;
 
     // IF SIGNALS
     wire [31:0]         if_pc_address;
@@ -222,6 +221,7 @@ module sirius(
         .ex_mem_mem_wb_reg_dest (ex_mem_wb_reg_dest),
         .id_rs                  (id_rs),
         .id_rt                  (id_rt),
+        .en_if                  (if_en),
         .en_if_id               (if_id_en),
         .en_id_ex               (id_ex_en),
         .en_ex_mem              (ex_mem_en),
@@ -251,6 +251,7 @@ module sirius(
         .clk                    (clk),
         .rst                    (rst),
         .pc_en                  (if_en),
+        .fifo_full              (fifo_full),
         .inst_ok_1              (inst_ok_1),
         .inst_ok_2              (inst_ok_2),
         .branch_taken           (id_branch_taken),
