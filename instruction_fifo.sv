@@ -124,7 +124,7 @@ module instruction_fifo(
             data_count <= data_count + 4'd1;
         else if(write_en1 && write_en2 && (((!read_en1) && (!read_en2)) || empty))
             data_count <= data_count + 4'd2;
-        else if(((read_en1 && (!read_en1) && (!write_en1) && (!write_en2)) ||
+        else if(((read_en1 && (!read_en2) && (!write_en1) && (!write_en2)) ||
                 (read_en1 && read_en2 && (write_en1) && (!write_en2))) && (!empty))
             data_count <= data_count - 4'd1;
         else if((read_en1 && read_en2 && (!write_en1) && (!write_en2)) && (!empty))

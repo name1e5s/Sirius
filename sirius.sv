@@ -209,7 +209,7 @@ module sirius(
     reg [ 4:0]      mem_wb_reg_dest_slave;
     reg             mem_wb_reg_en_slave;
     
-    assign              inst_en = ~fifo_full;
+    assign              inst_en = ~fifo_full && (~data_en);
     assign              inst_addr = if_pc_address;
 
     // Global components
@@ -226,6 +226,8 @@ module sirius(
         .ex_mem_mem_wb_reg_dest (ex_mem_wb_reg_dest),
         .id_rs                  (id_rs),
         .id_rt                  (id_rt),
+        .id_rs_slave            (id_rs_slave),
+        .id_rt_slave            (id_rt_slave),
         .en_if                  (if_en),
         .en_if_id               (if_id_en),
         .en_id_ex               (id_ex_en),
@@ -363,10 +365,10 @@ module sirius(
     forwarding_unit forwarding_rs(
         .slave_ex_reg_en    (id_ex_wb_reg_en_slave),
         .slave_ex_addr      (id_ex_wb_reg_dest_slave),
-        .slave_ex_data      (ex_result),
+        .slave_ex_data      (ex_result_slave),
         .master_ex_reg_en   (id_ex_wb_reg_en),
         .master_ex_addr     (id_ex_wb_reg_dest),
-        .master_ex_data     (ex_result_slave),
+        .master_ex_data     (ex_result),
         .slave_mem_reg_en   (ex_mem_wb_reg_en_slave),
         .slave_mem_addr     (ex_mem_wb_reg_dest_slave),
         .slave_mem_data     (ex_mem_result_slave),
@@ -381,10 +383,10 @@ module sirius(
     forwarding_unit forwarding_rt(
         .slave_ex_reg_en    (id_ex_wb_reg_en_slave),
         .slave_ex_addr      (id_ex_wb_reg_dest_slave),
-        .slave_ex_data      (ex_result),
+        .slave_ex_data      (ex_result_slave),
         .master_ex_reg_en   (id_ex_wb_reg_en),
         .master_ex_addr     (id_ex_wb_reg_dest),
-        .master_ex_data     (ex_result_slave),
+        .master_ex_data     (ex_result),
         .slave_mem_reg_en   (ex_mem_wb_reg_en_slave),
         .slave_mem_addr     (ex_mem_wb_reg_dest_slave),
         .slave_mem_data     (ex_mem_result_slave),
@@ -399,10 +401,10 @@ module sirius(
     forwarding_unit forwarding_rs_slave(
         .slave_ex_reg_en    (id_ex_wb_reg_en_slave),
         .slave_ex_addr      (id_ex_wb_reg_dest_slave),
-        .slave_ex_data      (ex_result),
+        .slave_ex_data      (ex_result_slave),
         .master_ex_reg_en   (id_ex_wb_reg_en),
         .master_ex_addr     (id_ex_wb_reg_dest),
-        .master_ex_data     (ex_result_slave),
+        .master_ex_data     (ex_result),
         .slave_mem_reg_en   (ex_mem_wb_reg_en_slave),
         .slave_mem_addr     (ex_mem_wb_reg_dest_slave),
         .slave_mem_data     (ex_mem_result_slave),
@@ -417,10 +419,10 @@ module sirius(
     forwarding_unit forwarding_rt_slave(
         .slave_ex_reg_en    (id_ex_wb_reg_en_slave),
         .slave_ex_addr      (id_ex_wb_reg_dest_slave),
-        .slave_ex_data      (ex_result),
+        .slave_ex_data      (ex_result_slave),
         .master_ex_reg_en   (id_ex_wb_reg_en),
         .master_ex_addr     (id_ex_wb_reg_dest),
-        .master_ex_data     (ex_result_slave),
+        .master_ex_data     (ex_result),
         .slave_mem_reg_en   (ex_mem_wb_reg_en_slave),
         .slave_mem_addr     (ex_mem_wb_reg_dest_slave),
         .slave_mem_data     (ex_mem_result_slave),
@@ -531,7 +533,7 @@ module sirius(
             id_ex_is_branch         <= 1'd0;
         end
         else if(id_ex_en) begin 
-            id_ex_pc_address        <= if_pc_address;
+            id_ex_pc_address        <= if_id_pc_address;
             id_ex_instruction       <= if_id_instruction;
             id_ex_rs_value          <= rs_value;
             id_ex_rt_value          <= rt_value;

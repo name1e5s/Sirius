@@ -35,6 +35,8 @@ module pc(
                 pc_address_next = pc_address + 32'd8;
             else if(inst_ok_1)
                 pc_address_next = pc_address + 32'd4;
+            else
+                pc_address_next = pc_address;
         end
         else begin
             pc_address_next = pc_address; 

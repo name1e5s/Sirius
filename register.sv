@@ -44,9 +44,9 @@ module register(
 	always_comb begin : read_data1_b
 		if(raddr1_b == 5'b00000)
 			rdata1_b = 32'h0000_0000;
-        else if(wen2_a && waddr2_a == raddr1_a)
+        else if(wen2_a && waddr2_a == raddr1_b)
             rdata1_b = wdata2_a;
-		else if(wen1_a && waddr1_a == raddr1_a)
+		else if(wen1_a && waddr1_a == raddr1_b)
 			rdata1_b = wdata1_a;
 		else
 			rdata1_b = _register[raddr1_b];
@@ -55,9 +55,9 @@ module register(
 	always_comb begin : read_data2_a
 		if(raddr2_a == 5'b00000)
 			rdata2_a = 32'h0000_0000;
-        else if(wen2_a && waddr2_a == raddr1_a)
+        else if(wen2_a && waddr2_a == raddr2_a)
             rdata2_a = wdata2_a;
-		else if(wen1_a && waddr1_a == raddr1_a)
+		else if(wen1_a && waddr1_a == raddr2_a)
 			rdata2_a = wdata1_a;
 		else
 			rdata2_a = _register[raddr2_a];
@@ -66,9 +66,9 @@ module register(
 	always_comb begin : read_data2_b
 		if(raddr2_b == 5'b00000)
 			rdata2_b = 32'h0000_0000;
-        else if(wen2_a && waddr2_a == raddr1_a)
+        else if(wen2_a && waddr2_a == raddr2_b)
             rdata2_b = wdata2_a;
-		else if(wen1_a && waddr1_a == raddr1_a)
+		else if(wen1_a && waddr1_a == raddr2_b)
 			rdata2_b = wdata1_a;
 		else
 			rdata2_b = _register[raddr2_b];

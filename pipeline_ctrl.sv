@@ -16,6 +16,8 @@ module pipe_ctrl(
         input [4:0]         ex_mem_mem_wb_reg_dest,
         input [4:0]         id_rs,
         input [4:0]         id_rt,
+        input [4:0]         id_rs_slave,
+        input [4:0]         id_rt_slave,
         input               id_branch_taken,
 
         output logic        en_if,
@@ -32,16 +34,13 @@ module pipe_ctrl(
         if(mem_stall)
             en = 5'b00000;
         else if(icache_stall)
-            en = 5'b00011;
+            en = 5'b00001;
         else if(ex_stall || (id_ex_alu_op == `ALU_MFC0 && ex_mem_cp0_wen))
             en = 5'b10001;
         else if(id_ex_mem_type == `MEM_LOAD &&
                 ((id_ex_mem_wb_reg_dest == id_rs) ||
-                (id_ex_mem_wb_reg_dest == id_rt)))
-            en = 5'b10011;
-        else if(ex_mem_mem_type == `MEM_LOAD &&
-                ((ex_mem_mem_wb_reg_dest == id_rs) ||
-                (ex_mem_mem_wb_reg_dest == id_rt)))
+                (id_ex_mem_wb_reg_dest == id_rt) || (id_ex_mem_wb_reg_dest == id_rs_slave) ||
+                (id_ex_mem_wb_reg_dest == id_rt_slave)))
             en = 5'b10011;
         else
             en = 5'b11111;
