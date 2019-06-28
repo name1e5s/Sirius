@@ -89,7 +89,7 @@ module instruction_fifo(
             delayed_data    <= read_pointer + 4'd1 == write_pointer? write_data1 : data[read_pointer + 4'd1];;
             delayed_pc      <= read_pointer + 4'd1 == write_pointer? write_address1 : address[read_pointer + 4'd1];;
         end
-        else begin
+        else if(read_en1) begin
             in_delay_slot   <= 1'd0;
             delayed_data    <= 32'd0;
             delayed_pc      <= 32'd0;

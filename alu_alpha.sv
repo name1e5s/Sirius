@@ -57,10 +57,10 @@ module alu_alpha(
     logic [1:0] 	mult_op, div_op;
     logic           mult_commit, div_commit;
     // Pipeline control.
-    wire 	        mdu_running = ~(mult_done & div_done);
+    wire 	        mdu_running = ~(mult_done & div_done) || mdu_prepare;
     logic 	        mdu_prepare;
 
-    assign stall_o      = flush_i? 0 : (mdu_prepare | (mdu_running & hilo_accessed));
+    assign stall_o      = flush_i? 0 : (mdu_running & hilo_accessed);
     assign mult_commit  = mult_done && (mult_done_prev != mult_done);
     assign div_commit   = div_done && (div_done_prev != div_done);
 
@@ -80,8 +80,9 @@ module alu_alpha(
         div_op = 2'd0;
         mult_op = 2'd0;
         mdu_prepare = 1'b0;
-        if(!flush_i) begin
-            mdu_prepare = 1'b0;
+        if(!flush_i && (mult_done & div_done) && 
+           (mult_done_prev == mult_done) && (div_done_prev == div_done)) begin
+            mdu_prepare = 1'b1;
             unique case(alu_op)
             `ALU_DIV:
                 div_op = 2'b10;

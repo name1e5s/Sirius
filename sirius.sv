@@ -27,7 +27,8 @@ module sirius(
 );
 
     wire                if_en, if_id_en, id_ex_en, ex_mem_en, mem_wb_en;
-    wire                flush;
+    wire                exp_detect;
+    wire                flush = ex_mem_en && exp_detect;
 
     wire                fifo_full;
 
@@ -607,7 +608,7 @@ module sirius(
     );
 
     always_ff @(posedge clk) begin
-        if(rst || (!ex_mem_en && mem_wb_en) || flush) begin
+        if(rst || flush) begin
             ex_mem_cp0_wen              <= 1'b0;
             ex_mem_cp0_waddr            <= 8'b0;
             ex_mem_cp0_wdata            <= 32'd0;
@@ -658,7 +659,7 @@ module sirius(
     end
 
     always_ff @(posedge clk) begin
-        if(rst || (!ex_mem_en && mem_wb_en) || flush) begin
+        if(rst || flush) begin
             ex_mem_pc_address_slave <= 32'd0;
             ex_mem_result_slave     <= 32'd0;
             ex_mem_wb_reg_dest_slave<= 5'd0;
@@ -714,7 +715,7 @@ module sirius(
         .is_inst                    (ex_mem_is_inst),
         .slave_exp_undefined_inst   (1'b0),
         .slave_exp_overflow         (ex_exp_overflow_slave),
-        .exp_detect                 (flush),
+        .exp_detect                 (exp_detect),
         .cp0_exp_en                 (mem_cp0_exp_en),
         .cp0_exl_clean              (mem_cp0_exl_clean),
         .cp0_exp_epc                (mem_cp0_exp_epc),
@@ -747,7 +748,7 @@ module sirius(
     );
 
     always_ff @(posedge clk) begin
-        if(rst || !mem_wb_en || flush) begin
+        if(rst || !mem_wb_en || exp_detect) begin
             mem_wb_result <= 32'd0;
             mem_wb_pc_address <= 32'd0;
             mem_wb_reg_dest <= 5'd0;
@@ -764,7 +765,7 @@ module sirius(
     end
 
     always_ff @(posedge clk) begin
-        if(rst || !mem_wb_en || flush) begin
+        if(rst || !mem_wb_en || exp_detect) begin
             mem_wb_result_slave <= 32'd0;
             mem_wb_pc_address_slave <= 32'd0;
             mem_wb_reg_dest_slave <= 5'd0;
