@@ -5,6 +5,7 @@ module dual_engine(
         input                   id_priv_inst_master,
         input  [4:0]            id_wb_reg_dest_master,
         input                   id_wb_reg_en_master,
+        input                   id_is_hilo_accessed_master,
 
         // Infomation about slave pipeline
         input  [5:0]            id_opcode_slave,
@@ -13,6 +14,7 @@ module dual_engine(
         input  [1:0]            id_mem_type_slave,
         input                   id_is_branch_instr_slave,
         input                   id_priv_inst_slave,
+        input                   id_is_hilo_accessed_slave,
 
         // Info about FIFO
         input                   fifo_empty,
@@ -21,13 +23,12 @@ module dual_engine(
         input                   enable_master,
         output logic            enable_slave
 );
-    assign enable_slave = 1'd0;
-/*
+
     wire fifo = ~(fifo_empty || fifo_almost_empty);
     always_comb begin : check_slave_enable
         if((!enable_master) || (id_priv_inst_master) || 
             (id_priv_inst_slave) || (|id_mem_type_slave) ||
-            id_is_branch_instr_slave)
+            id_is_branch_instr_slave || id_is_hilo_accessed_master || id_is_hilo_accessed_slave)
             enable_slave = 1'b0;
         else begin
             if(id_wb_reg_en_master) begin
@@ -40,9 +41,8 @@ module dual_engine(
                 end 
             end
             else begin
-                enable_slave <= 1'b1;
+                enable_slave = fifo;
             end
         end 
     end
-    */
 endmodule

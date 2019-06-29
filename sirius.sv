@@ -440,6 +440,8 @@ module sirius(
         .id_priv_inst_master        (id_priv_inst),
         .id_wb_reg_dest_master      (id_wb_reg_dest),
         .id_wb_reg_en_master        (id_wb_reg_en),
+        .id_is_hilo_accessed_master (id_is_hilo_accessed),
+        .id_is_hilo_accessed_slave  (id_is_hilo_accessed_slave),
         .id_opcode_slave            (id_opcode_slave),
         .id_rs_slave                (id_rs_slave),
         .id_rt_slave                (id_rt_slave),
@@ -558,22 +560,26 @@ module sirius(
         end
     end
 
+    reg id_ex_undefined_inst_slave;
+    reg ex_mem_undefined_inst_slave;
     always_ff @(posedge clk) begin
-        if(rst || (!id_ex_en && ex_mem_en) || flush || !id_enable_slave) begin
-            id_ex_pc_address_slave  <= 32'd0;
-            id_ex_alu_src_a_slave   <= 32'd0;
-            id_ex_alu_src_b_slave   <= 32'd0;
-            id_ex_wb_reg_dest_slave <= 5'd0;
-            id_ex_wb_reg_en_slave   <= 1'd0;
-            id_ex_alu_op_slave      <= 6'd0;
+        if(rst || (!id_ex_en && ex_mem_en) || flush || (id_ex_en && !id_enable_slave)) begin
+            id_ex_pc_address_slave      <= 32'd0;
+            id_ex_alu_src_a_slave       <= 32'd0;
+            id_ex_alu_src_b_slave       <= 32'd0;
+            id_ex_wb_reg_dest_slave     <= 5'd0;
+            id_ex_wb_reg_en_slave       <= 1'd0;
+            id_ex_alu_op_slave          <= 6'd0;
+            id_ex_undefined_inst_slave  <= 1'd0;
         end
         else if(id_ex_en) begin
-            id_ex_pc_address_slave  <= if_id_pc_address_slave;
-            id_ex_alu_src_a_slave   <= id_alu_src_a_slave;
-            id_ex_alu_src_b_slave   <= id_alu_src_b_slave;
-            id_ex_wb_reg_dest_slave <= id_wb_reg_dest_slave;
-            id_ex_wb_reg_en_slave   <= id_wb_reg_en_slave;
-            id_ex_alu_op_slave      <= id_alu_op_slave;
+            id_ex_pc_address_slave      <= if_id_pc_address_slave;
+            id_ex_alu_src_a_slave       <= id_alu_src_a_slave;
+            id_ex_alu_src_b_slave       <= id_alu_src_b_slave;
+            id_ex_wb_reg_dest_slave     <= id_wb_reg_dest_slave;
+            id_ex_wb_reg_en_slave       <= id_wb_reg_en_slave;
+            id_ex_alu_op_slave          <= id_alu_op_slave;
+            id_ex_undefined_inst_slave  <= id_undefined_inst_slave;
         end
     end
 
@@ -684,18 +690,20 @@ module sirius(
 
     always_ff @(posedge clk) begin
         if(rst || (!ex_mem_en && mem_wb_en) || flush) begin
-            ex_mem_pc_address_slave <= 32'd0;
-            ex_mem_result_slave     <= 32'd0;
-            ex_mem_wb_reg_dest_slave<= 5'd0;
-            ex_mem_wb_reg_en_slave  <= 1'd0;
-            ex_mem_overflow_slave   <= 1'd0;
+            ex_mem_pc_address_slave     <= 32'd0;
+            ex_mem_result_slave         <= 32'd0;
+            ex_mem_wb_reg_dest_slave    <= 5'd0;
+            ex_mem_wb_reg_en_slave      <= 1'd0;
+            ex_mem_overflow_slave       <= 1'd0;
+            ex_mem_undefined_inst_slave <= 1'd0;
         end
         else if(ex_mem_en) begin
-            ex_mem_pc_address_slave <= id_ex_pc_address_slave;
-            ex_mem_result_slave     <= ex_result_slave;
-            ex_mem_wb_reg_dest_slave<= id_ex_wb_reg_dest_slave;
-            ex_mem_wb_reg_en_slave  <= id_ex_wb_reg_en_slave;
-            ex_mem_overflow_slave   <= ex_exp_overflow_slave;
+            ex_mem_pc_address_slave     <= id_ex_pc_address_slave;
+            ex_mem_result_slave         <= ex_result_slave;
+            ex_mem_wb_reg_dest_slave    <= id_ex_wb_reg_dest_slave;
+            ex_mem_wb_reg_en_slave      <= id_ex_wb_reg_en_slave;
+            ex_mem_overflow_slave       <= ex_exp_overflow_slave;
+            ex_mem_undefined_inst_slave <= id_ex_undefined_inst_slave;
         end
     end 
 
@@ -717,6 +725,8 @@ module sirius(
         .address_error              (mem_addr_error)
     );
 
+    wire exp_detect_salve;
+
     exception_alpha exception(
         .clk                        (clk),
         .rst                        (rst),
@@ -737,9 +747,10 @@ module sirius(
         .allow_interrupt            (mem_cp0_allow_interrupt),
         .interrupt_flag             (mem_cp0_interrupt_flag),
         .is_inst                    (ex_mem_is_inst),
-        .slave_exp_undefined_inst   (1'b0),
+        .slave_exp_undefined_inst   (ex_mem_undefined_inst_slave),
         .slave_exp_overflow         (ex_exp_overflow_slave),
         .exp_detect                 (exp_detect),
+        .exp_detect_salve           (exp_detect_salve),
         .cp0_exp_en                 (mem_cp0_exp_en),
         .cp0_exl_clean              (mem_cp0_exl_clean),
         .cp0_exp_epc                (mem_cp0_exp_epc),
@@ -772,7 +783,7 @@ module sirius(
     );
 
     always_ff @(posedge clk) begin
-        if(rst || !mem_wb_en || exp_detect) begin
+        if(rst || !mem_wb_en || (exp_detect && ~exp_detect_salve)) begin
             mem_wb_result       <= 32'd0;
             mem_wb_pc_address   <= 32'd0;
             mem_wb_reg_dest     <= 5'd0;

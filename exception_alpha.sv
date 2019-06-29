@@ -24,6 +24,7 @@ module exception_alpha(
         input                       slave_exp_overflow,
 
         output logic                exp_detect,
+        output logic                exp_detect_salve,
         output logic                cp0_exp_en,
         output logic                cp0_exl_clean,
         output logic [31:0]         cp0_exp_epc,
@@ -40,6 +41,7 @@ module exception_alpha(
         cp0_exl_clean = 1'b0;
         cp0_exp_bad_vaddr_wen = 1'b0;
         exp_detect = 1'b1;
+        exp_detect_salve = 1'd0;
         cp0_exp_bd = is_branch_slot;
         cp0_exp_epc = is_branch_slot ? pc_address - 32'd4: pc_address;
         if(is_inst && allow_interrupt && interrupt_flag != 8'd0)
@@ -74,12 +76,13 @@ module exception_alpha(
             cp0_exp_bd = is_branch_instruction;
             cp0_exp_epc = is_branch_instruction? pc_address : pc_address + 32'd4;
             cp0_exp_code = 5'h0a;
-
+            exp_detect_salve = 1'd1;
         end
         else if(slave_exp_overflow) begin
             cp0_exp_bd = is_branch_instruction;
             cp0_exp_epc = is_branch_instruction? pc_address : pc_address + 32'd4;
             cp0_exp_code = 5'h0c;
+            exp_detect_salve = 1'd1;
         end
         else begin
             cp0_exp_en = 1'b0;
