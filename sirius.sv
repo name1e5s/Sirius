@@ -37,8 +37,6 @@ module sirius(
     wire [31:0]         if_pc_slave_address = if_pc_address + 32'd4;
 
     // ID SIGNALS
-    wire                id_branch_taken;
-    wire [31:0]         id_branch_address;
     // ID -- master
     wire [5:0]          id_opcode, id_funct;
     wire [4:0]          id_rs, id_rt, id_rd, id_shamt;
@@ -87,6 +85,8 @@ module sirius(
 
     wire                id_enable_slave;
     // EX SIGNALS
+    wire                ex_branch_taken;
+    wire [31:0]         ex_branch_address;
     wire [7:0]          ex_cop0_addr;
     wire                ex_cop0_wen;
     wire [31:0]         ex_cop0_data;
@@ -262,8 +262,8 @@ module sirius(
         .fifo_full              (fifo_full),
         .inst_ok_1              (inst_ok_1),
         .inst_ok_2              (inst_ok_2),
-        .branch_taken           (id_branch_taken),
-        .branch_address         (id_branch_address),
+        .branch_taken           (ex_branch_taken),
+        .branch_address         (ex_branch_address),
         .exception_taken        (mem_exception_taken),
         .exception_address      (mem_exception_address),
         .pc_address             (if_pc_address)
@@ -271,8 +271,8 @@ module sirius(
 
     instruction_fifo instruction_fifo_0(
         .clk                    (clk),
-        .rst                    (rst || flush || id_branch_taken),
-        .rst_with_delay         (id_branch_taken && ~id_enable_slave && ~flush),
+        .rst                    (rst || flush || ex_branch_taken),
+        .rst_with_delay         (1'd0),
         .master_is_branch       (id_is_branch_instr),
         .read_en1               (if_id_en),
         .read_en2               (id_enable_slave),
@@ -501,20 +501,9 @@ module sirius(
         endcase
     end
 
-    branch branch_unit(
-        .en                 (if_id_en),
-        .pc_address         (if_id_pc_address),
-        .instruction        (if_id_instruction),
-        .is_branch_instr    (id_is_branch_instr),
-        .branch_type        (id_branch_type),
-        .data_rs            (rs_value),
-        .data_rt            (rt_value),
-        .branch_taken       (id_branch_taken),
-        .branch_address     (id_branch_address)
-    );
-
+    reg [2:0] id_ex_branch_type;
     always_ff @(posedge clk) begin
-        if(rst || (!id_ex_en && ex_mem_en) || flush) begin
+        if(rst || (!id_ex_en && ex_mem_en) || flush || (id_ex_en && ex_branch_taken && id_ex_slave_en)) begin
             id_ex_pc_address        <= 32'd0;
             id_ex_instruction       <= 32'd0;
             id_ex_rs_value          <= 32'd0;
@@ -535,6 +524,7 @@ module sirius(
             id_ex_is_inst           <= 1'd0;
             id_ex_in_delay_slot     <= 1'd0;
             id_ex_is_branch         <= 1'd0;
+            id_ex_branch_type       <= 3'd0;
         end
         else if(id_ex_en) begin 
             id_ex_pc_address        <= if_id_pc_address;
@@ -557,13 +547,15 @@ module sirius(
             id_ex_is_inst           <= if_id_en;
             id_ex_in_delay_slot     <= if_id_in_delay_slot;
             id_ex_is_branch         <= id_is_branch_instr;
+            id_ex_branch_type       <= id_branch_type;
         end
     end
 
     reg id_ex_undefined_inst_slave;
     reg ex_mem_undefined_inst_slave;
+    reg id_ex_slave_en;
     always_ff @(posedge clk) begin
-        if(rst || (!id_ex_en && ex_mem_en) || flush || (id_ex_en && !id_enable_slave)) begin
+        if(rst || (!id_ex_en && ex_mem_en) || flush || (id_ex_en && !id_enable_slave) || (id_ex_en && ex_branch_taken)) begin
             id_ex_pc_address_slave      <= 32'd0;
             id_ex_alu_src_a_slave       <= 32'd0;
             id_ex_alu_src_b_slave       <= 32'd0;
@@ -571,6 +563,7 @@ module sirius(
             id_ex_wb_reg_en_slave       <= 1'd0;
             id_ex_alu_op_slave          <= 6'd0;
             id_ex_undefined_inst_slave  <= 1'd0;
+            id_ex_slave_en              <= 1'd0;
         end
         else if(id_ex_en) begin
             id_ex_pc_address_slave      <= if_id_pc_address_slave;
@@ -580,8 +573,21 @@ module sirius(
             id_ex_wb_reg_en_slave       <= id_wb_reg_en_slave;
             id_ex_alu_op_slave          <= id_alu_op_slave;
             id_ex_undefined_inst_slave  <= id_undefined_inst_slave;
+            id_ex_slave_en              <= id_enable_slave;
         end
     end
+
+    branch branch_unit(
+        .en                 (id_ex_en),
+        .pc_address         (id_ex_pc_address),
+        .instruction        (id_ex_instruction),
+        .is_branch_instr    (id_ex_is_branch),
+        .branch_type        (id_ex_branch_type),
+        .data_rs            (id_ex_rs_value),
+        .data_rt            (id_ex_rt_value),
+        .branch_taken       (ex_branch_taken),
+        .branch_address     (ex_branch_address)
+    );
 
     wire [63:0] ex_hilo_value;
     reg         ex_mem_hilo_wen;
@@ -767,10 +773,10 @@ module sirius(
         .hint                   (interrupt),
         .raddr                  (ex_cop0_addr),
         .rdata                  (ex_cop0_data),
-        .wen                    (ex_mem_cp0_wen),
+        .wen                    (ex_mem_cp0_wen && ex_mem_en),
         .waddr                  (ex_mem_cp0_waddr),
         .wdata                  (ex_mem_cp0_wdata),
-        .exp_en                 (mem_cp0_exp_en),
+        .exp_en                 (mem_cp0_exp_en && ex_mem_en),
         .exp_badvaddr_en        (mem_cp0_exp_badvaddr_en),
         .exp_badvaddr           (mem_cp0_exp_badvaddr),
         .exp_bd                 (mem_cp0_exp_bd),
