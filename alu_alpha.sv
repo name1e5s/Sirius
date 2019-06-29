@@ -8,11 +8,11 @@ module alu_alpha(
         input                       clk,
         input                       rst,
         input                       flush_i,
-        input                       hilo_accessed,
 
         input [5:0]                 alu_op,
         input [31:0]                src_a,
         input [31:0]                src_b,
+        input [63:0]                src_hilo,
 
         // For MFC0/MTC0
         input  [4:0]                rd,
@@ -25,12 +25,14 @@ module alu_alpha(
         output logic                exp_syscal,
         output logic                exp_break,
 
+        output logic                hilo_wen,
+        output logic [63:0]         hilo_result,
         output logic [31:0]         result,
         output logic                stall_o         // Stall pipeline when a mdu operation is running and an instruction needs 
                                                     // result in hilo.
 );
 
-    reg [63:0] 			         hilo;
+    wire [63:0] 			     hilo = src_hilo;
     wire [31:0] 			     hi = hilo[63:32];
     wire [31:0] 			     lo = hilo[31:0];
     wire [31:0] 			     add_result = src_a + src_b;
@@ -60,7 +62,7 @@ module alu_alpha(
     wire 	        mdu_running = ~(mult_done & div_done) || mdu_prepare;
     logic 	        mdu_prepare;
 
-    assign stall_o      = flush_i? 0 : (mdu_running & hilo_accessed);
+    assign stall_o      = flush_i? 0 : (mdu_running);
     assign mult_commit  = mult_done && (mult_done_prev != mult_done);
     assign div_commit   = div_done && (div_done_prev != div_done);
 
@@ -178,25 +180,21 @@ module alu_alpha(
     end
 
     // HiLo read/write
-    always_ff @(posedge clk) begin : hilo_read_write
-        if(rst) begin
-            hilo <= 64'h0000_0000_0000_0000;
-        end
+    always_comb begin : hilo_read_write
+        hilo_wen = 1'd1;
+        if(div_commit)
+            hilo_result = _hilo_div;
+        else if(mult_commit)
+            hilo_result = _hilo_mult;
         else begin
-            if(div_commit)
-                hilo <= _hilo_div;
-            else if(mult_commit)
-                hilo <= _hilo_mult;
-            else begin
-                unique case(alu_op)
-                `ALU_MTHI:
-                    hilo <= { src_a, lo };
-                `ALU_MTLO:
-                    hilo <= { hi, src_a };
-                default:
-                    hilo <= hilo;
-                endcase
-            end
+            unique case(alu_op)
+            `ALU_MTHI:
+                hilo_result = { src_a, lo };
+            `ALU_MTLO:
+                hilo_result = { hi, src_a };
+            default:
+                hilo_wen = 1'd0;
+            endcase
         end
     end
 endmodule

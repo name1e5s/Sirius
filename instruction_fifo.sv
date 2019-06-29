@@ -4,6 +4,7 @@ module instruction_fifo(
         input                       clk,
         input                       rst,
         input                       rst_with_delay,
+        input                       master_is_branch,
 
         // Read inputs
         input                       read_en1,
@@ -30,6 +31,7 @@ module instruction_fifo(
 
     // Reset status
     reg         in_delay_slot;
+    reg         in_delay_slot_without_rst;
     reg [31:0]  delayed_data;
     reg [31:0]  delayed_pc;
     // Store data here
@@ -72,15 +74,25 @@ module instruction_fifo(
             data_out2       = 32'd0;
             address_out1    = _address_out1;
             address_out2    = 32'd0;
-            delay_slot_out1 = 1'd0;
+            delay_slot_out1 = in_delay_slot_without_rst;
         end 
         else begin
             data_out1       = _data_out1;
             data_out2       = _data_out2;
             address_out1    = _address_out1;
             address_out2    = _address_out2;
-            delay_slot_out1 = 1'd0;
+            delay_slot_out1 = in_delay_slot_without_rst;
         end
+    end
+
+    always_ff @(posedge clk) begin : update_in_delay_slot_without_rst
+        if(rst)
+            in_delay_slot_without_rst <= 1'd0;
+        else if(master_is_branch && read_en1) begin
+            in_delay_slot_without_rst <= 1'd1;
+        end
+        else if(read_en1)
+            in_delay_slot_without_rst <= 1'd0;
     end
 
     always_ff @(posedge clk) begin : update_delayed

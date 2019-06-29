@@ -272,7 +272,8 @@ module sirius(
     instruction_fifo instruction_fifo_0(
         .clk                    (clk),
         .rst                    (rst || flush || id_branch_taken),
-        .rst_with_delay         (id_branch_taken && ~id_enable_slave),
+        .rst_with_delay         (id_branch_taken && ~id_enable_slave && ~flush),
+        .master_is_branch       (id_is_branch_instr),
         .read_en1               (if_id_en),
         .read_en2               (id_enable_slave),
         .write_en1              (inst_ok & inst_ok_1),
@@ -576,14 +577,31 @@ module sirius(
         end
     end
 
+    wire [63:0] ex_hilo_value;
+    reg         ex_mem_hilo_wen;
+    reg  [63:0] ex_mem_hilo_result;
+    reg         mem_wb_hilo_wen;
+    reg  [63:0] mem_wb_hilo_result;
+    hilo hilo_0(
+        .clk                (clk),
+        .rst                (rst),
+        .hilo_wen_wb        (mem_wb_hilo_wen),
+        .hilo_result_wb     (mem_wb_hilo_result),
+        .hilo_wen_mem       (ex_mem_hilo_wen),
+        .hilo_result_mem    (ex_mem_hilo_result),
+        .hilo_value         (ex_hilo_value)
+    );
+
+    wire        ex_hilo_wen;
+    wire [63:0] ex_hilo_result;
     alu_alpha alu_alpha(
         .clk                (clk),
         .rst                (rst),
-        .flush_i            (flush),
-        .hilo_accessed      (id_is_hilo_accessed),
+        .flush_i            (exp_detect),
         .alu_op             (id_ex_alu_op),
         .src_a              (id_ex_alu_src_a),
         .src_b              (id_ex_alu_src_b),
+        .src_hilo           (ex_hilo_value),
         .rd                 (id_ex_rd_addr),
         .sel                (id_ex_sel),
         .cop0_addr          (ex_cop0_addr),
@@ -593,6 +611,8 @@ module sirius(
         .exp_eret           (ex_exp_eret),
         .exp_syscal         (ex_exp_syscal),
         .exp_break          (ex_exp_break),
+        .hilo_wen           (ex_hilo_wen),
+        .hilo_result        (ex_hilo_result),
         .result             (ex_result),
         .stall_o            (ex_stall_o)
     );
@@ -608,7 +628,7 @@ module sirius(
     );
 
     always_ff @(posedge clk) begin
-        if(rst || flush) begin
+        if(rst || (!ex_mem_en && mem_wb_en) || flush) begin
             ex_mem_cp0_wen              <= 1'b0;
             ex_mem_cp0_waddr            <= 8'b0;
             ex_mem_cp0_wdata            <= 32'd0;
@@ -631,6 +651,8 @@ module sirius(
             ex_mem_branch_link          <= 1'd0;
             ex_mem_is_inst              <= 1'd0;
             ex_mem_is_branch            <= 1'd0;
+            ex_mem_hilo_wen             <= 1'd0;
+            ex_mem_hilo_result          <= 64'd0;
         end
         else if(ex_mem_en) begin 
             ex_mem_cp0_wen              <= ex_cop0_wen;
@@ -655,11 +677,13 @@ module sirius(
             ex_mem_branch_link          <= id_ex_is_branch_link;
             ex_mem_is_inst              <= id_ex_is_inst;
             ex_mem_is_branch            <= id_ex_is_branch;
+            ex_mem_hilo_wen             <= ex_hilo_wen;
+            ex_mem_hilo_result          <= ex_hilo_result;
         end
     end
 
     always_ff @(posedge clk) begin
-        if(rst || flush) begin
+        if(rst || (!ex_mem_en && mem_wb_en) || flush) begin
             ex_mem_pc_address_slave <= 32'd0;
             ex_mem_result_slave     <= 32'd0;
             ex_mem_wb_reg_dest_slave<= 5'd0;
@@ -749,33 +773,37 @@ module sirius(
 
     always_ff @(posedge clk) begin
         if(rst || !mem_wb_en || exp_detect) begin
-            mem_wb_result <= 32'd0;
-            mem_wb_pc_address <= 32'd0;
-            mem_wb_reg_dest <= 5'd0;
+            mem_wb_result       <= 32'd0;
+            mem_wb_pc_address   <= 32'd0;
+            mem_wb_reg_dest     <= 5'd0;
             mem_wb_reg_write_en <= 1'd0;
-            mem_wb_branch_link <= 1'd0;
+            mem_wb_branch_link  <= 1'd0;
+            mem_wb_hilo_wen     <= 1'd0;
+            mem_wb_hilo_result  <= 64'd0;
         end
         else begin
-            mem_wb_result <= mem_result;
-            mem_wb_pc_address <= ex_mem_pc_address;
-            mem_wb_reg_dest <= ex_mem_wb_reg_dest;
+            mem_wb_result       <= mem_result;
+            mem_wb_pc_address   <= ex_mem_pc_address;
+            mem_wb_reg_dest     <= ex_mem_wb_reg_dest;
             mem_wb_reg_write_en <= ex_mem_wb_reg_en;
-            mem_wb_branch_link <= ex_mem_branch_link;
+            mem_wb_branch_link  <= ex_mem_branch_link;
+            mem_wb_hilo_wen     <= ex_mem_hilo_wen;
+            mem_wb_hilo_result  <= ex_mem_hilo_result;
         end
     end
 
     always_ff @(posedge clk) begin
         if(rst || !mem_wb_en || exp_detect) begin
-            mem_wb_result_slave <= 32'd0;
+            mem_wb_result_slave     <= 32'd0;
             mem_wb_pc_address_slave <= 32'd0;
-            mem_wb_reg_dest_slave <= 5'd0;
-            mem_wb_reg_en_slave <= 1'd0;
+            mem_wb_reg_dest_slave   <= 5'd0;
+            mem_wb_reg_en_slave     <= 1'd0;
         end
         else begin
-            mem_wb_result_slave <= ex_mem_result_slave;
+            mem_wb_result_slave     <= ex_mem_result_slave;
             mem_wb_pc_address_slave <= ex_mem_pc_address_slave;
-            mem_wb_reg_dest_slave <= ex_mem_wb_reg_dest_slave;
-            mem_wb_reg_en_slave <= ex_mem_wb_reg_en_slave;
+            mem_wb_reg_dest_slave   <= ex_mem_wb_reg_dest_slave;
+            mem_wb_reg_en_slave     <= ex_mem_wb_reg_en_slave;
         end
     end
 

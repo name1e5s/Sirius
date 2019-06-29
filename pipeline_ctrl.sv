@@ -34,7 +34,7 @@ module pipe_ctrl(
         if(mem_stall)
             en = 5'b00000;
         else if(icache_stall)
-            en = 5'b00001;
+            en = 5'b00000;
         else if(ex_stall || (id_ex_alu_op == `ALU_MFC0 && ex_mem_cp0_wen))
             en = 5'b10001;
         else if(id_ex_mem_type == `MEM_LOAD &&

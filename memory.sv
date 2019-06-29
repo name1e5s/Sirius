@@ -22,7 +22,7 @@ module memory(
         output logic                address_error
 );
 
-    assign mem_en   = |mem_type;
+    assign mem_en   = |mem_type && (~address_error);
     assign mem_addr = address;
 
     always_comb begin : detect_alignment_error
@@ -45,7 +45,10 @@ module memory(
         result = address;
         mem_wen = 4'b0;
         mem_wdata = rt_value;
-        begin
+        if(address_error) begin
+        // We do noting when align error
+        end
+        else begin
             if(mem_type == `MEM_STOR) begin
                 unique case(mem_size)
                 `SZ_FULL:
