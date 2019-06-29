@@ -165,6 +165,7 @@ module sirius(
     reg [ 4:0]      id_ex_wb_reg_dest_slave;
     reg             id_ex_wb_reg_en_slave;
     reg [ 5:0]      id_ex_alu_op_slave;
+    reg             id_ex_slave_en;
 
     // EX_MEM SIGNALS
     // MASTER
@@ -216,7 +217,6 @@ module sirius(
     // Global components
     pipe_ctrl pipe_ctrl0(
         .icache_stall           (inst_en & (~inst_ok)),
-        .id_branch_taken        (id_branch_taken),
         .ex_stall               (ex_stall_o),
         .mem_stall              (data_en & ~data_ok),
         .id_ex_alu_op           (id_ex_alu_op),
@@ -272,7 +272,7 @@ module sirius(
     instruction_fifo instruction_fifo_0(
         .clk                    (clk),
         .rst                    (rst || flush || ex_branch_taken),
-        .rst_with_delay         (1'd0),
+        .rst_with_delay         (ex_branch_taken && if_id_fifo_empty && ~id_ex_slave_en),
         .master_is_branch       (id_is_branch_instr),
         .read_en1               (if_id_en),
         .read_en2               (id_enable_slave),
@@ -553,7 +553,6 @@ module sirius(
 
     reg id_ex_undefined_inst_slave;
     reg ex_mem_undefined_inst_slave;
-    reg id_ex_slave_en;
     always_ff @(posedge clk) begin
         if(rst || (!id_ex_en && ex_mem_en) || flush || (id_ex_en && !id_enable_slave) || (id_ex_en && ex_branch_taken)) begin
             id_ex_pc_address_slave      <= 32'd0;

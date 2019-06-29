@@ -98,8 +98,8 @@ module instruction_fifo(
     always_ff @(posedge clk) begin : update_delayed
         if(rst && rst_with_delay) begin
             in_delay_slot   <= 1'd1;
-            delayed_data    <= read_pointer + 4'd1 == write_pointer? write_data1 : data[read_pointer + 4'd1];;
-            delayed_pc      <= read_pointer + 4'd1 == write_pointer? write_address1 : address[read_pointer + 4'd1];;
+            delayed_data    <= (read_pointer + 4'd1 == write_pointer || read_pointer == write_pointer)? write_data1 : data[read_pointer + 4'd1];
+            delayed_pc      <= (read_pointer + 4'd1 == write_pointer || read_pointer == write_pointer)? write_address1 : address[read_pointer + 4'd1];
         end
         else if(read_en1) begin
             in_delay_slot   <= 1'd0;
