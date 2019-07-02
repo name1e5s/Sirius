@@ -157,7 +157,7 @@ module mmu_inst(
         ram_we      = 1'd0;
         unique case(cstate)
         IDLE: begin
-            if(rst || !read_en) begin : 
+            if(rst || !ien) begin : 
                 // We do nothing here.
             end
             else if(iaddr_type) begin// Uncacahed read
@@ -235,7 +235,7 @@ module mmu_inst(
         CACHED_REFILL: begin
             ram_we      = 1'd1;
             nstate      = IDLE;
-            
+
             inst_ok     = 1'd1;
             inst_ok_1   = 1'd1;
             inst_ok_2   = ~(&inst_offset);
