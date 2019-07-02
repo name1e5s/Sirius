@@ -51,7 +51,7 @@ module mmu_inst(
     wire [  6:0]    inst_index  = iaddr_psy[12:6];
     wire [  3:0]    inst_offset = iaddr_psy[5:2];
     wire [  6:0]    ram_dpra    = inst_index;
-    wire [  6:0]    ram_a       = waiting_index;
+    wire [  6:0]    ram_a       = inst_index;
     wire [530:0]    ram_d;
     logic           ram_we;
 
@@ -180,7 +180,7 @@ module mmu_inst(
                 inst_data_2 = &inst_offset? 32'd0 : icache_return_data[inst_offset + 4'd1];
             end
             else begin // Cache miss
-                iaddr_req   = {inst_addr[31:6], 6'd0};
+                iaddr_req   = {iaddr_psy[31:6], 6'd0};
                 read_en     = 1'd1;
                 read_type   = 1'd1;
                 if(iaddr_req_ok) begin
