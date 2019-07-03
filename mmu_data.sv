@@ -11,13 +11,14 @@ module mmu_data(
         input                       den,
         input [3:0]                 dwen,
         input [31:0]                daddr_psy,
-        input [31:0]                dwdata,
+        input [31:0]                wdata,
         input                       daddr_type, // 0 as cacahe...
         
         output logic                data_ok,
         output logic                data_data,
 
         // From/to MMU
+        output logic                mmu_running,
         // read channel
         output logic [31:0]         daddr_req,
         output logic                read_en,
@@ -53,9 +54,11 @@ module mmu_data(
     enum logic [2:0] {
         IDLE            = 3'b000,
         UNCACHED_WSHAKE = 3'b001,
+        UNCACHED_WWRITE = 3'b011,
         UNCACHED_WRESULT= 3'b010,
         CACHED_WSHAKE   = 3'b101,
-        CACHED_WWRITE   = 3'b110
+        CACHED_WWRITE   = 3'b110,
+        CACHED_WRESULT  = 3'b111
     } wcstate, wnstate;
 
     reg  [127:0]    dcache_valid;
@@ -223,12 +226,15 @@ module mmu_data(
         read_en         = 1'd0;
         read_type       = 1'd0;
         write_required  = 1'd0;
+        writeback_required = 1'd0;
+        mmu_running     = 1'd0;
         unique case(cstate)
         IDLE: begin
             if(rst || !den) begin
                 // Make vivado happy
             end
             else if(daddr_type) begin // Uncached access
+                mmu_running = 1'd1;
                 if(dwen) begin
                     write_required  = 1'd1;
                     nstate          = UNCACHED_WWAIT
@@ -252,7 +258,7 @@ module mmu_data(
                     data_ok     = 1'd0;
                     data_data   = 32'd0;
                     for(int i = 0; i < 16; i++)
-                        ram_buffer[i] = (i == data_offset) ? dwdata & { {8{dwen[3]}, {8{dwen[2]}, {8{dwen[1]}, {8{dwen[0]} } } : dcache_return_data[i];
+                        ram_buffer[i] = (i == data_offset) ? wdata & { {8{dwen[3]}, {8{dwen[2]}, {8{dwen[1]}, {8{dwen[0]} } } : dcache_return_data[i];
                 end
                 else begin
                     data_ok     = 1'd0;
@@ -262,6 +268,7 @@ module mmu_data(
             end
             else begin // Cache miss
                 daddr_req   = {daddr_psy[31:6], 6'd0};
+                mmu_running = 1'd1;
                 read_en     = 1'd1;
                 read_type   = 1'd1;
                 write_required = dcache_dirty[data_index];
@@ -277,6 +284,7 @@ module mmu_data(
             iaddr_req   = daddr_psy;
             read_en     = 1'd1;
             read_type   = 1'd0;
+            mmu_running = 1'd1;
             if(iaddr_req_ok) begin
                 nstate  = UNCACHED_RETURN;
             end
@@ -287,6 +295,7 @@ module mmu_data(
         UNCACHED_RETURN: begin
             data_ok     = ddata_rvalid;
             data_data   = ddata_rdata;
+            mmu_running = 1'd1;
             if(ddata_rlast) begin
                 nstate  = IDLE;
             end
@@ -295,12 +304,14 @@ module mmu_data(
             end
         end
         UNCACHED_WWAIT: begin
+            mmu_running = 1'd1;
             if(wcstate == UNCACHED_WRESULT && ddata_bvalid)
                 nstate = IDLE;
             else
                 nstate = UNCACHED_WWAIT;
         end
         CACHED_RSHAKE: begin
+            mmu_running = 1'd1;
             daddr_req   = {daddr_psy[31:6], 6'd0};
             read_en     = 1'd1;
             read_type   = 1'd1;
@@ -312,6 +323,7 @@ module mmu_data(
             end
         end
         CACHED_RWAIT: begin
+            mmu_running = 1'd1;
             if(ddata_rlast && wcstate == IDLE) begin
                 nstate  = CACHED_REFILL;
             end
@@ -323,6 +335,7 @@ module mmu_data(
             end
         end
         CACHED_WWAIT: begin
+            mmu_running = 1'd1;
             if(wcstate == IDLE) begin
                 nstate  = CACHED_WWAIT;
             end
@@ -331,6 +344,7 @@ module mmu_data(
             end
         end
         CACHED_REFILL: begin
+            mmu_running = 1'd1;
             ram_we      = 1'd1;
             nstate      = IDLE;
 
@@ -352,6 +366,89 @@ module mmu_data(
         dwvalid         = 1'd0;
         dwdata          = 32'd0;
         dwlast          = 1'd0;
+        case(wcstate)
+        IDLE: begin
+            if(write_required && daddr_type) begin // Uncached write
+                daddr_wreq      = daddr_psy;
+                write_en        = 1'd1;
+                write_type      = 1'd1;
+                write_byte_en   = dwen;
+                if(daddr_wreq_ok) begin
+                    wnstate = UNCACHED_WWRITE;
+                end
+                else begin
+                    wnstate = UNCACHED_WSHAKE;
+                end
+            end
+            else if(write_required) begin
+                daddr_req       = { dcache_return_tag, data_index, 6'd0 };
+                write_en        = 1'd1;
+                write_type      = 1'd0;
+                if(daddr_wreq_ok) begin
+                    wnstate = CACHED_WWRITE;
+                end
+                else begin
+                    wnstate = CACHED_WSHAKE;
+                end
+            end
+        end
+        UNCACHED_WSHAKE: begin
+            daddr_wreq      = daddr_psy;
+            write_en        = 1'd1;
+            write_type      = 1'd1;
+            if(daddr_wreq_ok) begin
+                wnstate = UNCACHED_WWRITE;
+            end
+            else begin
+                wnstate = UNCACHED_WSHAKE;
+            end
+        end
+        UNCACHED_WWRITE: begin
+            write_byte_en   = dwen;
+            dwdata          = wdata;
+            dwvalid         = 1'd1;
+            dwlast          = 1'd1;
+            if(ddata_wready)
+                wnstate = UNCACHED_WRESULT;
+            else
+                wnstate = UNCACHED_WWRITE;
+        end
+        UNCACHED_WRESULT: begin
+            if(ddata_bvalid)
+                wnstate = IDLE;
+            else
+                wnstate = UNCACHED_WRESULT;
+        end
+        CACHED_WSHAKE: begin
+            daddr_req       = { dcache_return_tag, data_index, 6'd0 };
+            write_en        = 1'd1;
+            write_type      = 1'd0;
+            if(daddr_wreq_ok) begin
+                wnstate = CACHED_WWRITE;
+            end
+            else begin
+                wnstate = CACHED_WSHAKE;
+            end
+        end
+        CACHED_WWRITE: begin
+            write_byte_en   = 4'b1111;
+            dwdata          = dcache_return_data[output_counter];
+            dwvalid         = 1'd1;
+            dwlast          = &output_counter;
+            if(&output_counter && ddata_wready)
+                wnstate = CACHED_WRESULT;
+            else
+                wnstate = CACHED_WWRITE;
+        end
+        CACHED_WRESULT: begin
+            if(ddata_bvalid)
+                wnstate = IDLE;
+            else
+                wnstate = CACHED_WRESULT;
+        end
+        default: begin
+        // Make vivado happy :)
+        end
     end
 
 endmodule

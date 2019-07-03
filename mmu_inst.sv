@@ -27,6 +27,7 @@ module mmu_inst(
         output logic [31:0]         inst_data_2,
         
         // From/to mmu_top
+        output logic                mmu_running,
         output logic [31:0]         iaddr_req,
         output logic                read_en,
         output logic                read_type, // o as cache refill, 1 as uncached
@@ -155,6 +156,7 @@ module mmu_inst(
         read_type   = 1'd0;
         // Internal signals...
         ram_we      = 1'd0;
+        mmu_running = 1'd0;
         unique case(cstate)
         IDLE: begin
             if(rst || !ien) begin : 
@@ -163,6 +165,7 @@ module mmu_inst(
             else if(iaddr_type) begin// Uncacahed read
                 iaddr_req   = iaddr_psy;
                 read_en     = 1'd1;
+                mmu_running = 1'd1;
                 read_type   = 1'd0;
                 if(iaddr_req_ok) begin
                     nstate  = UNCACHED_RETURN;
@@ -182,6 +185,7 @@ module mmu_inst(
             else begin // Cache miss
                 iaddr_req   = {iaddr_psy[31:6], 6'd0};
                 read_en     = 1'd1;
+                mmu_running = 1'd1;
                 read_type   = 1'd1;
                 if(iaddr_req_ok) begin
                     nstate  = CACHED_WAIT;
@@ -194,6 +198,7 @@ module mmu_inst(
         UNCACHED_SHAKE: begin
             iaddr_req   = iaddr_psy;
             read_en     = 1'd1;
+            mmu_running = 1'd1;
             read_type   = 1'd0;
             if(iaddr_req_ok) begin
                 nstate  = UNCACHED_RETURN;
@@ -206,6 +211,7 @@ module mmu_inst(
             inst_ok     = idata_rvalid;
             inst_ok_1   = idata_rvalid;
             inst_data_1 = idata_rdata;
+            mmu_running = 1'd1;
             if(idata_rlast) begin
                 nstate  = IDLE;
             end
@@ -217,6 +223,7 @@ module mmu_inst(
             iaddr_req   = {inst_addr[31:6], 6'd0};
             read_en     = 1'd1;
             read_type   = 1'd1;
+            mmu_running = 1'd1;
             if(iaddr_req_ok) begin
                 nstate  = CACHED_WAIT;
             end
@@ -225,6 +232,7 @@ module mmu_inst(
             end
         end
         CACHED_WAIT: begin
+            mmu_running = 1'd1;
             if(idata_rlast) begin
                 nstate  = CACHED_REFILL;
             end
@@ -233,6 +241,7 @@ module mmu_inst(
             end
         end
         CACHED_REFILL: begin
+            mmu_running = 1'd1;
             ram_we      = 1'd1;
             nstate      = IDLE;
 
