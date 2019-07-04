@@ -261,7 +261,7 @@ module mmu_data(
                     end
                 end
             end
-            else if(dcache_valid[daddr_psy] && dcache_return_tag == data_tag) begin
+            else if(dcache_valid[data_index] && dcache_return_tag == data_tag) begin
                 if(dwen != 4'd0) begin
                     writeback_required = 1'd1;
                     ram_we      = 1'd1;
@@ -314,8 +314,10 @@ module mmu_data(
         end
         UNCACHED_WWAIT: begin
             mmu_running = 1'd1;
-            if(wcstate == UNCACHED_WRESULT && ddata_bvalid)
+            if(wcstate == UNCACHED_WRESULT && ddata_bvalid) begin
+                data_ok = 1'd1;
                 nstate = IDLE;
+            end
             else
                 nstate = UNCACHED_WWAIT;
         end
@@ -357,7 +359,7 @@ module mmu_data(
             ram_we      = 1'd1;
             nstate      = IDLE;
 
-            data_ok     = 1'd1;
+            data_ok     = ~(|dwen);
             data_data   = receive_buffer[data_offset];
         end
         default: begin
