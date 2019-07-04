@@ -182,6 +182,7 @@ module alu_alpha(
     // HiLo read/write
     always_comb begin : hilo_read_write
         hilo_wen = 1'd1;
+        hilo_result = 64'd0;
         if(div_commit)
             hilo_result = _hilo_div;
         else if(mult_commit)

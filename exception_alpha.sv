@@ -40,6 +40,7 @@ module exception_alpha(
         cp0_exp_en = 1'd1;
         cp0_exl_clean = 1'b0;
         cp0_exp_bad_vaddr_wen = 1'b0;
+        cp0_exp_bad_vaddr = 32'd0;
         exp_detect = 1'b1;
         exp_detect_salve = 1'd0;
         cp0_exp_bd = is_branch_slot;

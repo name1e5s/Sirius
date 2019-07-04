@@ -26,8 +26,17 @@ module decoder_ctrl(
 
     // Control logic.
     always_comb begin : decoder
-        undefined_inst = 1'b0;
-        priv_inst = 1'b0;
+        // To prevent latch...
+        undefined_inst  = 1'b0;
+        priv_inst       = 1'b0;
+        alu_op          = `ALU_ADDU;
+        alu_src         = 2'd0;
+        alu_imm_src     = 1'd1;
+        mem_type        = `MEM_NOOP;
+        mem_size        = `SZ_FULL;
+        wb_reg_dest     = 5'd0;
+        wb_reg_en       = 1'd0;
+        unsigned_flag   = 1'd0;
         casex({opcode, funct})
             {6'b000000, 6'b100000}: // ADD
                 {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 

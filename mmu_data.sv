@@ -230,6 +230,14 @@ module mmu_data(
         write_required  = 1'd0;
         writeback_required = 1'd0;
         mmu_running     = 1'd0;
+
+        nstate          = IDLE;
+        ram_we          = 1'd0;
+
+        for(int i = 0; i < 16; i++) begin
+            ram_buffer[i] = dcache_return_data[i];
+        end
+
         unique case(cstate)
         IDLE: begin
             if(rst || !den) begin
@@ -259,9 +267,7 @@ module mmu_data(
                     ram_we      = 1'd1;
                     data_ok     = 1'd0;
                     data_data   = 32'd0;
-                    for(int i = 0; i < 16; i++) begin
-                        ram_buffer[i] = (i == data_offset) ? wdata  & { {8{dwen[3]}}, {8{dwen[2]}}, {8{dwen[1]}}, {8{dwen[0]}} } : dcache_return_data[i];
-                    end 
+                    ram_buffer[data_offset] = wdata  & { {8{dwen[3]}}, {8{dwen[2]}}, {8{dwen[1]}}, {8{dwen[0]}} };
                 end
                 else begin
                     data_ok     = 1'd0;
@@ -369,6 +375,8 @@ module mmu_data(
         dwvalid         = 1'd0;
         dwdata          = 32'd0;
         dwlast          = 1'd0;
+
+        wnstate          = WIDLE;
         case(wcstate)
         WIDLE: begin
             if(write_required && daddr_type) begin // Uncached write

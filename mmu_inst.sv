@@ -159,6 +159,8 @@ module mmu_inst(
         // Internal signals...
         ram_we      = 1'd0;
         mmu_running = 1'd0;
+
+        nstate      = IDLE;
         unique case(cstate)
         IDLE: begin
             if(rst || !ien) begin // We do nothing here.
