@@ -265,12 +265,12 @@ module mmu_data(
                 if(dwen != 4'd0) begin
                     writeback_required = 1'd1;
                     ram_we      = 1'd1;
-                    data_ok     = 1'd0;
+                    data_ok     = 1'd1;
                     data_data   = 32'd0;
                     ram_buffer[data_offset] = wdata  & { {8{dwen[3]}}, {8{dwen[2]}}, {8{dwen[1]}}, {8{dwen[0]}} };
                 end
                 else begin
-                    data_ok     = 1'd0;
+                    data_ok     = 1'd1;
                     data_data   = dcache_return_data[data_offset];
                 end
                 nstate  = IDLE;
