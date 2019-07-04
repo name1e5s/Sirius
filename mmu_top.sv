@@ -104,7 +104,7 @@ module mmu_top(
 
     mmu_inst inst_ctrl(
         .clk            (clk),
-        .rst            (rst).
+        .rst            (rst),
         .ien            (inst_en),
         .iaddr_psy      (iaddr_psy),
         .iaddr_type     (iaddr_type),

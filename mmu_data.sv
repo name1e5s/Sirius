@@ -52,7 +52,7 @@ module mmu_data(
     } cstate, nstate;
 
     enum logic [2:0] {
-        IDLE            = 3'b000,
+        WIDLE            = 3'b000,
         UNCACHED_WSHAKE = 3'b001,
         UNCACHED_WWRITE = 3'b011,
         UNCACHED_WRESULT= 3'b010,
@@ -69,12 +69,17 @@ module mmu_data(
     wire [  3:0]    data_offset = daddr_psy[5:2];
     wire [  6:0]    ram_dpra    = data_index;
     wire [  6:0]    ram_a       = data_index;
-    wire [530:0]    _ram_d, ram_d, ram_d_buffer;
+    logic[530:0]    _ram_d, ram_d, ram_d_buffer;
     logic           ram_we;
 
     wire [530:0]    dcache_return; // Connect to output channel of ram.
     wire [ 31:0]    dcache_return_data[0:15];
+
+    reg [ 31:0]     receive_buffer[0:15];
     logic[ 31:0]    ram_buffer[0:15];
+    
+    logic write_required;
+    logic writeback_required;
 
     wire [18:0]dcache_return_tag  = dcache_return[18:0];
     assign dcache_return_data[0]  = dcache_return[50:19];
@@ -131,7 +136,7 @@ module mmu_data(
     assign ram_d_buffer[530:499]   = ram_buffer[15];
 	
 
-    dist_mem_gen_dcache dcache_ram(
+    dist_mem_gen_icache dcache_ram(
         .clk            (clk),
         .dpra           (ram_dpra),
         .a              (ram_a),
@@ -149,7 +154,7 @@ module mmu_data(
 
     always_ff @(posedge clk) begin : update_wstatus
         if(rst)
-            wcstate <= IDLE;
+            wcstate <= WIDLE;
         else
             wcstate <= wnstate;
     end
@@ -181,7 +186,7 @@ module mmu_data(
         if(rst || cstate != CACHED_RWAIT) begin
             receive_counter <= 4'd0;
         end
-        else if(cstate == CACHED_RWAIT && idata_rvalid) // receive new data
+        else if(cstate == CACHED_RWAIT && ddata_rvalid) begin// receive new data
             receive_counter <= receive_counter + 4'd1;
         end
     end
@@ -191,8 +196,8 @@ module mmu_data(
             for(int i = 0; i < 16; i++)
                 receive_buffer[i] <= 32'd0;
         end
-        else if(cstate == CACHED_WAIT && idata_rvalid) begin
-            receive_buffer[receive_counter] <= idata_rdata;
+        else if(cstate == CACHED_RWAIT && ddata_rvalid) begin
+            receive_buffer[receive_counter] <= ddata_rdata;
         end
     end
 
@@ -202,13 +207,10 @@ module mmu_data(
         if(rst || wcstate != CACHED_WWRITE) begin
             output_counter <= 4'd0;
         end
-        else if(wcstate == CACHED_WWRITE && ddata_wready) // receive new data
+        else if(wcstate == CACHED_WWRITE && ddata_wready) begin // receive new data
             output_counter <= output_counter + 4'd1;
         end
     end
-
-    logic write_required;
-    logic writeback_required;
 
     always_comb begin
         if(writeback_required)
@@ -237,7 +239,7 @@ module mmu_data(
                 mmu_running = 1'd1;
                 if(dwen) begin
                     write_required  = 1'd1;
-                    nstate          = UNCACHED_WWAIT
+                    nstate          = UNCACHED_WWAIT;
                 end
                 else begin // Read
                     daddr_req       = daddr_psy;
@@ -257,8 +259,9 @@ module mmu_data(
                     ram_we      = 1'd1;
                     data_ok     = 1'd0;
                     data_data   = 32'd0;
-                    for(int i = 0; i < 16; i++)
-                        ram_buffer[i] = (i == data_offset) ? wdata & { {8{dwen[3]}, {8{dwen[2]}, {8{dwen[1]}, {8{dwen[0]} } } : dcache_return_data[i];
+                    for(int i = 0; i < 16; i++) begin
+                        ram_buffer[i] = (i == data_offset) ? wdata  & { {8{dwen[3]}}, {8{dwen[2]}}, {8{dwen[1]}}, {8{dwen[0]}} } : dcache_return_data[i];
+                    end 
                 end
                 else begin
                     data_ok     = 1'd0;
@@ -276,16 +279,16 @@ module mmu_data(
                     nstate  = CACHED_RWAIT;
                 end
                 else begin
-                    nstate  = CACHED_SHAKE;
+                    nstate  = CACHED_RSHAKE;
                 end
             end
         end
         UNCACHED_SHAKE: begin
-            iaddr_req   = daddr_psy;
+            daddr_req   = daddr_psy;
             read_en     = 1'd1;
             read_type   = 1'd0;
             mmu_running = 1'd1;
-            if(iaddr_req_ok) begin
+            if(daddr_req_ok) begin
                 nstate  = UNCACHED_RETURN;
             end
             else begin
@@ -319,12 +322,12 @@ module mmu_data(
                 nstate  = CACHED_RWAIT;
             end
             else begin
-                nstate  = CACHED_SHAKE;
+                nstate  = CACHED_RSHAKE;
             end
         end
         CACHED_RWAIT: begin
             mmu_running = 1'd1;
-            if(ddata_rlast && wcstate == IDLE) begin
+            if(ddata_rlast && wcstate == WIDLE) begin
                 nstate  = CACHED_REFILL;
             end
             else if(ddata_rlast) begin
@@ -336,7 +339,7 @@ module mmu_data(
         end
         CACHED_WWAIT: begin
             mmu_running = 1'd1;
-            if(wcstate == IDLE) begin
+            if(wcstate != WIDLE) begin
                 nstate  = CACHED_WWAIT;
             end
             else begin
@@ -367,7 +370,7 @@ module mmu_data(
         dwdata          = 32'd0;
         dwlast          = 1'd0;
         case(wcstate)
-        IDLE: begin
+        WIDLE: begin
             if(write_required && daddr_type) begin // Uncached write
                 daddr_wreq      = daddr_psy;
                 write_en        = 1'd1;
@@ -381,7 +384,7 @@ module mmu_data(
                 end
             end
             else if(write_required) begin
-                daddr_req       = { dcache_return_tag, data_index, 6'd0 };
+                daddr_wreq      = { dcache_return_tag, data_index, 6'd0 };
                 write_en        = 1'd1;
                 write_type      = 1'd0;
                 if(daddr_wreq_ok) begin
@@ -415,12 +418,12 @@ module mmu_data(
         end
         UNCACHED_WRESULT: begin
             if(ddata_bvalid)
-                wnstate = IDLE;
+                wnstate = WIDLE;
             else
                 wnstate = UNCACHED_WRESULT;
         end
         CACHED_WSHAKE: begin
-            daddr_req       = { dcache_return_tag, data_index, 6'd0 };
+            daddr_wreq      = { dcache_return_tag, data_index, 6'd0 };
             write_en        = 1'd1;
             write_type      = 1'd0;
             if(daddr_wreq_ok) begin
@@ -442,13 +445,14 @@ module mmu_data(
         end
         CACHED_WRESULT: begin
             if(ddata_bvalid)
-                wnstate = IDLE;
+                wnstate = WIDLE;
             else
                 wnstate = CACHED_WRESULT;
         end
         default: begin
         // Make vivado happy :)
         end
+    endcase
     end
 
 endmodule

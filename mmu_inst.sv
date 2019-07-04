@@ -58,6 +58,8 @@ module mmu_inst(
 
     wire [530:0]    icache_return; // Connect to output channel of ram.
     wire [ 31:0]    icache_return_data[0:15];
+    
+    reg [ 31:0]     receive_buffer[0:15];
 
     wire [18:0]icache_return_tag  = icache_return[18:0];
     assign icache_return_data[0]  = icache_return[50:19];
@@ -126,7 +128,7 @@ module mmu_inst(
         if(rst || cstate != CACHED_WAIT) begin
             receive_counter <= 4'd0;
         end
-        else if(cstate == CACHED_WAIT && idata_rvalid) // receive new data
+        else if(cstate == CACHED_WAIT && idata_rvalid) begin// receive new data
             receive_counter <= receive_counter + 4'd1;
         end
     end
@@ -159,8 +161,7 @@ module mmu_inst(
         mmu_running = 1'd0;
         unique case(cstate)
         IDLE: begin
-            if(rst || !ien) begin : 
-                // We do nothing here.
+            if(rst || !ien) begin // We do nothing here.
             end
             else if(iaddr_type) begin// Uncacahed read
                 iaddr_req   = iaddr_psy;
@@ -220,7 +221,7 @@ module mmu_inst(
             end
         end
         CACHED_SHAKE: begin
-            iaddr_req   = {inst_addr[31:6], 6'd0};
+            iaddr_req   = {iaddr_psy[31:6], 6'd0};
             read_en     = 1'd1;
             read_type   = 1'd1;
             mmu_running = 1'd1;
