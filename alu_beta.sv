@@ -49,7 +49,7 @@ module alu_beta(
             `ALU_OUTB:
                 result = src_b;
             default:
-                result = 32'hxxxx_xxxx;
+                result = 32'h0000_0000;
         endcase
     end
 

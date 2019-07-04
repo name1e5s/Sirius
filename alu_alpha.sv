@@ -164,7 +164,7 @@ module alu_alpha(
             `ALU_MTC0:
                 result = cop0_addr;
             default:
-                result = 32'hxxxx_xxxx;
+                result = 32'h0000_0000; // Prevent dcache error
         endcase
     end
 
