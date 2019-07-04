@@ -267,7 +267,8 @@ module mmu_data(
                     ram_we      = 1'd1;
                     data_ok     = 1'd1;
                     data_data   = 32'd0;
-                    ram_buffer[data_offset] = wdata  & { {8{dwen[3]}}, {8{dwen[2]}}, {8{dwen[1]}}, {8{dwen[0]}} };
+                    ram_buffer[data_offset] = (dcache_return_data[data_offset] & {{8{~dwen[3]}}, {8{~dwen[2]}}, {8{~dwen[1]}}, {8{~dwen[0]}}}) |  
+                                                (wdata  & {{8{dwen[3]}}, {8{dwen[2]}}, {8{dwen[1]}}, {8{dwen[0]}}});
                 end
                 else begin
                     data_ok     = 1'd1;

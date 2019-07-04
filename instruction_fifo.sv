@@ -131,16 +131,36 @@ module instruction_fifo(
     always_ff @(posedge clk) begin : update_counter
         if(rst)
             data_count <= 4'd0;
-        else if((write_en1 && (!write_en2) && (((!read_en1) && (!read_en2)) || empty)) ||
-                (write_en1 && write_en2 && (read_en1 && (!read_en2))))
-            data_count <= data_count + 4'd1;
-        else if(write_en1 && write_en2 && (((!read_en1) && (!read_en2)) || empty))
-            data_count <= data_count + 4'd2;
-        else if(((read_en1 && (!read_en2) && (!write_en1) && (!write_en2)) ||
-                (read_en1 && read_en2 && (write_en1) && (!write_en2))) && (!empty))
-            data_count <= data_count - 4'd1;
-        else if((read_en1 && read_en2 && (!write_en1) && (!write_en2)) && (!empty))
-            data_count <= data_count - 4'd2;
+        else if(empty) begin
+            case({write_en1, write_en2})
+            2'b10: begin
+                data_count  <= data_count + 4'd1;
+            end
+            2'b11: begin
+                data_count  <= data_count + 4'd2;
+            end
+            default:
+                data_count  <= data_count;
+            endcase
+        end
+        else begin
+            case({write_en1, write_en2, read_en1, read_en2})
+            4'b1100: begin
+                data_count  <= data_count + 4'd2;
+            end
+            4'b1110, 4'b1000: begin
+                data_count  <= data_count + 4'd1;
+            end
+            4'b1011, 4'b0010: begin
+                data_count  <= data_count - 4'd1;
+            end
+            4'b0011: begin
+                data_count  <= data_count == 4'd1 ? 4'd0 : data_count - 4'd2;
+            end
+            default:
+                data_count  <= data_count;
+            endcase
+        end
     end
 
     always_ff @(posedge clk) begin : write_data 
