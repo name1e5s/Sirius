@@ -279,7 +279,7 @@ module mmu_data(
                 daddr_req   = {daddr_psy[31:6], 6'd0};
                 mmu_running = 1'd1;
                 read_en     = 1'd1;
-                read_type   = 1'd1;
+                read_type   = 1'd0;
                 write_required = dcache_dirty[data_index];
                 if(daddr_req_ok) begin
                     nstate  = CACHED_RWAIT;
@@ -292,7 +292,7 @@ module mmu_data(
         UNCACHED_SHAKE: begin
             daddr_req   = daddr_psy;
             read_en     = 1'd1;
-            read_type   = 1'd0;
+            read_type   = 1'd1;
             mmu_running = 1'd1;
             if(daddr_req_ok) begin
                 nstate  = UNCACHED_RETURN;
@@ -323,7 +323,7 @@ module mmu_data(
             mmu_running = 1'd1;
             daddr_req   = {daddr_psy[31:6], 6'd0};
             read_en     = 1'd1;
-            read_type   = 1'd1;
+            read_type   = 1'd0;
             if(daddr_req_ok) begin
                 nstate  = CACHED_RWAIT;
             end

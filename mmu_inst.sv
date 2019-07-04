@@ -169,7 +169,7 @@ module mmu_inst(
                 iaddr_req   = iaddr_psy;
                 read_en     = 1'd1;
                 mmu_running = 1'd1;
-                read_type   = 1'd0;
+                read_type   = 1'd1;
                 if(iaddr_req_ok) begin
                     nstate  = UNCACHED_RETURN;
                 end
@@ -189,7 +189,7 @@ module mmu_inst(
                 iaddr_req   = {iaddr_psy[31:6], 6'd0};
                 read_en     = 1'd1;
                 mmu_running = 1'd1;
-                read_type   = 1'd1;
+                read_type   = 1'd0;
                 if(iaddr_req_ok) begin
                     nstate  = CACHED_WAIT;
                 end
@@ -202,7 +202,7 @@ module mmu_inst(
             iaddr_req   = iaddr_psy;
             read_en     = 1'd1;
             mmu_running = 1'd1;
-            read_type   = 1'd0;
+            read_type   = 1'd1;
             if(iaddr_req_ok) begin
                 nstate  = UNCACHED_RETURN;
             end
@@ -225,7 +225,7 @@ module mmu_inst(
         CACHED_SHAKE: begin
             iaddr_req   = {iaddr_psy[31:6], 6'd0};
             read_en     = 1'd1;
-            read_type   = 1'd1;
+            read_type   = 1'd0;
             mmu_running = 1'd1;
             if(iaddr_req_ok) begin
                 nstate  = CACHED_WAIT;
