@@ -211,7 +211,7 @@ module sirius(
     reg [ 4:0]      mem_wb_reg_dest_slave;
     reg             mem_wb_reg_en_slave;
     
-    assign              inst_en = ~fifo_full && (~data_en);
+    assign              inst_en = if_en;
     assign              inst_addr = if_pc_address;
 
     // Global components
@@ -225,6 +225,7 @@ module sirius(
         .ex_mem_cp0_wen         (ex_mem_cp0_wen),
         .ex_mem_mem_type        (ex_mem_type),
         .ex_mem_mem_wb_reg_dest (ex_mem_wb_reg_dest),
+        .fifo_full              (fifo_full),
         .id_rs                  (id_rs),
         .id_rt                  (id_rt),
         .id_rs_slave            (id_rs_slave),

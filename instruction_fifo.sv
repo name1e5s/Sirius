@@ -54,6 +54,22 @@ module instruction_fifo(
     wire [31:0] _address_out1 = address[read_pointer];
     wire [31:0] _address_out2 = address[read_pointer + 4'd1];
 
+    // Delay slot data FSM
+    reg delay_slot_refill;
+
+    always_ff @(posedge clk) begin
+        if(rst && rst_with_delay && !write_en1 && 
+            (read_pointer + 4'd1 == write_pointer || read_pointer == write_pointer)) begin
+            delay_slot_refill   <= 1'd1;
+        end
+        else if(delay_slot_refill && write_en1)
+            delay_slot_refill   <= 1'd0;
+        else if(delay_slot_refill)
+            delay_slot_refill   <= delay_slot_refill;
+        else
+            delay_slot_refill   <= 1'd0;
+    end
+
     always_comb begin : select_output
         if(in_delay_slot) begin
             data_out1       = delayed_data;
@@ -101,7 +117,10 @@ module instruction_fifo(
             delayed_data    <= (read_pointer + 4'd1 == write_pointer || read_pointer == write_pointer)? write_data1 : data[read_pointer + 4'd1];
             delayed_pc      <= (read_pointer + 4'd1 == write_pointer || read_pointer == write_pointer)? write_address1 : address[read_pointer + 4'd1];
         end
-        else if(read_en1) begin
+        else if(delay_slot_refill && write_en1) begin
+            delayed_data    <= write_data1;
+        end
+        else if(!delay_slot_refill && read_en1) begin
             in_delay_slot   <= 1'd0;
             delayed_data    <= 32'd0;
             delayed_pc      <= 32'd0;

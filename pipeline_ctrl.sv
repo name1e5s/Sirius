@@ -19,6 +19,7 @@ module pipe_ctrl(
         input [4:0]         id_rs_slave,
         input [4:0]         id_rt_slave,
         input               id_branch_taken,
+        input               fifo_full,
 
         output logic        en_if,
         output logic        en_if_id,
@@ -28,7 +29,9 @@ module pipe_ctrl(
 );
 
     logic [4:0] en;
-    assign { en_if, en_if_id, en_id_ex, en_ex_mem, en_mem_wb } = en;
+    wire _en_if;
+    assign { _en_if, en_if_id, en_id_ex, en_ex_mem, en_mem_wb } = en;
+    assign en_if = _en_if && (~fifo_full);
     
     always_comb begin : set_control_logic
         if(mem_stall)
