@@ -481,9 +481,9 @@ module sirius(
     logic [31:0] id_alu_src_a_slave, id_alu_src_b_slave;
     always_comb begin : get_alu_src_a_slave
         if(id_alu_src_slave == `SRC_SFT)
-            id_alu_src_a_slave = { 27'd0 ,id_shamt};
-        else if(id_alu_src == `SRC_PCA)
-            id_alu_src_a_slave = if_id_pc_address + 32'd8;
+            id_alu_src_a_slave = { 27'd0 ,id_shamt_slave};
+        else if(id_alu_src_slave == `SRC_PCA)
+            id_alu_src_a_slave = if_id_pc_address_slave + 32'd8;
         else
             id_alu_src_a_slave = rs_value_slave;
     end
