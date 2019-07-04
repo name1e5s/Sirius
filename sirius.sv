@@ -753,7 +753,7 @@ module sirius(
         .interrupt_flag             (mem_cp0_interrupt_flag),
         .is_inst                    (ex_mem_is_inst),
         .slave_exp_undefined_inst   (ex_mem_undefined_inst_slave),
-        .slave_exp_overflow         (ex_exp_overflow_slave),
+        .slave_exp_overflow         (ex_mem_overflow_slave),
         .exp_detect                 (exp_detect),
         .exp_detect_salve           (exp_detect_salve),
         .cp0_exp_en                 (mem_cp0_exp_en),
