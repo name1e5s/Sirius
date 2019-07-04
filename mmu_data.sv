@@ -15,7 +15,7 @@ module mmu_data(
         input                       daddr_type, // 0 as cacahe...
         
         output logic                data_ok,
-        output logic                data_data,
+        output logic [31:0]         data_data,
 
         // From/to MMU
         output logic                mmu_running,

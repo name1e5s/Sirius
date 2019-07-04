@@ -138,7 +138,7 @@ module mmu_top(
     wire        write_type;
     wire [3:0]  write_byte_en;
     wire        dwvalid;
-    wire        dwdata;
+    wire [31:0] dwdata;
     wire        dwlast;
     logic       daddr_wreq_ok;
     logic       ddata_wready;
