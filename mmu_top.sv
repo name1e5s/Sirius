@@ -174,23 +174,9 @@ module mmu_top(
         .mmu_running    (data_running)
     );
 
-    logic   data_running_prev;
-    logic   inst_running_prev;
-
-    always_ff @(posedge clk) begin
-        if(rst || data_running) begin
-            data_running_prev   <= 1'd0;
-            inst_running_prev   <= 1'd0;
-        end
-        else begin
-            data_running_prev   <= data_running;
-            inst_running_prev   <= inst_running;
-        end
-    end
-
     // Read channel 
     always_comb begin
-        if(~inst_running_prev && data_running) begin // Data first
+        if((iread_en && inst_running && dread_en && data_running) || (data_running && ~dread_en && inst_running) || (data_running && ~inst_running)) begin // Data first
             araddr          = daddr_req;
             arlen           = dread_type ? 8'd0 : 8'd15;
             arburst         = dread_type ? 2'd0 : 2'd1;
