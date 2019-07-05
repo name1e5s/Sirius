@@ -4,6 +4,7 @@
 
 // Pipeline stall control
 module pipe_ctrl(
+        input               rst,
         input               icache_stall,
         input               ex_stall,
         input               mem_stall,
@@ -20,6 +21,7 @@ module pipe_ctrl(
         input [4:0]         id_rt_slave,
         input               id_branch_taken,
         input               fifo_full,
+        input               exp_detect,
 
         output logic        en_if,
         output logic        en_if_id,
@@ -29,15 +31,24 @@ module pipe_ctrl(
 );
 
     logic [4:0] en;
-    wire _en_if;
-    assign { _en_if, en_if_id, en_id_ex, en_ex_mem, en_mem_wb } = en;
-    assign en_if = _en_if && (~fifo_full);
+    assign { en_if, en_if_id, en_id_ex, en_ex_mem, en_mem_wb } = en;
     
     always_comb begin : set_control_logic
-        if(mem_stall)
-            en = 5'b00000;
-        else if(icache_stall)
-            en = 5'b00000;
+        if(rst)
+            en = 5'b11111;
+        else if(icache_stall) begin
+            if(exp_detect || mem_stall)
+                en = 5'b00000;
+            else begin
+                en = 5'b00001;
+            end
+        end
+        else if(mem_stall) begin
+            if(id_branch_taken)
+                en = 5'b00000;
+            else
+                en = 5'b10000;
+        end
         else if(ex_stall)
             en = 5'b10001;
         else if(id_ex_alu_op == `ALU_MFC0 && ex_mem_cp0_wen)

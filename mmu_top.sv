@@ -178,7 +178,7 @@ module mmu_top(
     logic   inst_running_prev;
 
     always_ff @(posedge clk) begin
-        if(rst) begin
+        if(rst || data_running) begin
             data_running_prev   <= 1'd0;
             inst_running_prev   <= 1'd0;
         end

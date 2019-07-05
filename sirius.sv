@@ -211,11 +211,12 @@ module sirius(
     reg [ 4:0]      mem_wb_reg_dest_slave;
     reg             mem_wb_reg_en_slave;
     
-    assign              inst_en = if_en;
+    assign              inst_en = ~fifo_full;
     assign              inst_addr = if_pc_address;
 
     // Global components
     pipe_ctrl pipe_ctrl0(
+        .rst                    (rst),
         .icache_stall           (inst_en & (~inst_ok)),
         .ex_stall               (ex_stall_o),
         .mem_stall              (data_en & ~data_ok),
@@ -228,6 +229,8 @@ module sirius(
         .fifo_full              (fifo_full),
         .id_rs                  (id_rs),
         .id_rt                  (id_rt),
+        .id_branch_taken        (ex_branch_taken),
+        .exp_detect             (exp_detect),
         .id_rs_slave            (id_rs_slave),
         .id_rt_slave            (id_rt_slave),
         .en_if                  (if_en),
@@ -773,10 +776,10 @@ module sirius(
         .hint                   (interrupt),
         .raddr                  (ex_cop0_addr),
         .rdata                  (ex_cop0_data),
-        .wen                    (ex_mem_cp0_wen && ex_mem_en),
+        .wen                    (ex_mem_cp0_wen && mem_wb_en),
         .waddr                  (ex_mem_cp0_waddr),
         .wdata                  (ex_mem_cp0_wdata),
-        .exp_en                 (mem_cp0_exp_en && ex_mem_en),
+        .exp_en                 (mem_cp0_exp_en && mem_wb_en),
         .exp_badvaddr_en        (mem_cp0_exp_badvaddr_en),
         .exp_badvaddr           (mem_cp0_exp_badvaddr),
         .exp_bd                 (mem_cp0_exp_bd),
