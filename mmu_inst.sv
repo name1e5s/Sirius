@@ -146,8 +146,8 @@ module mmu_inst(
     reg [63:0]  cache_hit_counter;
     reg [63:0]  cache_miss_counter;
 
-    wire        cache_hit;
-    wire        cache_miss;
+    logic       cache_hit;
+    logic       cache_miss;
 
     always_ff @(posedge clk) begin
         if(rst) begin
