@@ -219,6 +219,26 @@ module mmu_data(
             ram_d = _ram_d;
     end
 
+    // For performance tunning...
+    reg [63:0]  cache_hit_counter;
+    reg [63:0]  cache_miss_counter;
+
+    wire        cache_hit;
+    wire        cache_miss;
+
+    always_ff @(posedge clk) begin
+        if(rst) begin
+            cache_hit_counter   <= 64'd0;
+            cache_miss_counter  <= 64'd0;
+        end
+        else begin
+            if(cache_hit)
+                cache_hit_counter   <= cache_hit_counter + 64'd1;
+            else if(cache_miss)
+                cache_miss_counter  <= cache_miss_counter + 64'd1;
+        end
+    end
+
     // Read channel
     always_comb begin
         data_ok         = 1'd0;
@@ -233,6 +253,11 @@ module mmu_data(
 
         nstate          = IDLE;
         ram_we          = 1'd0;
+
+        // For perf tunning...
+        cache_hit   = 1'd0;
+        cache_miss  = 1'd0;
+
 
         for(int i = 0; i < 16; i++) begin
             ram_buffer[i] = dcache_return_data[i];
@@ -262,6 +287,7 @@ module mmu_data(
                 end
             end
             else if(dcache_valid[data_index] && dcache_return_tag == data_tag) begin
+                cache_hit   = 1'd1;
                 if(dwen != 4'd0) begin
                     writeback_required = 1'd1;
                     ram_we      = 1'd1;
@@ -277,6 +303,7 @@ module mmu_data(
                 nstate  = IDLE;
             end
             else begin // Cache miss
+                cache_miss  = 1'd1;
                 daddr_req   = {daddr_psy[31:6], 6'd0};
                 mmu_running = 1'd1;
                 read_en     = 1'd1;
