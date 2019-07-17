@@ -57,6 +57,14 @@ module instruction_fifo(
     // Delay slot data FSM
     reg delay_slot_refill;
 
+    logic [63:0] rst_with_delay_counter;
+    always_ff @(posedge clk) begin
+        if(rst)
+            rst_with_delay_counter <= 64'd0;
+        else if(rst_with_delay)
+            rst_with_delay_counter <= rst_with_delay_counter + 64'd1;
+    end
+
     always_ff @(posedge clk) begin
         if(rst && rst_with_delay && !write_en1 && 
             (read_pointer + 4'd1 == write_pointer || read_pointer == write_pointer)) begin
