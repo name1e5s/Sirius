@@ -214,6 +214,13 @@ module sirius(
     assign              inst_en = ~fifo_full;
     assign              inst_addr = if_pc_address;
 
+    logic [63:0] clk_counter;
+    always_ff @(posedge clk) begin
+        if(rst)
+            clk_counter <= 64'd0;
+        else
+            clk_counter <= clk_counter + 64'd1;
+    end
 
     // Global components
     pipe_ctrl pipe_ctrl0(
@@ -459,6 +466,14 @@ module sirius(
         .enable_master              (if_id_en),
         .enable_slave               (id_enable_slave)
     );
+
+    logic [63:0] id_enable_slave_counter;
+    always_ff @(posedge clk) begin
+        if(rst)
+            id_enable_slave_counter <= 64'd0;
+        else if(id_enable_slave)
+            id_enable_slave_counter <= id_enable_slave_counter + 64'd1;
+    end
 
     logic [31:0] id_alu_src_a, id_alu_src_b;
     // Get alu sources

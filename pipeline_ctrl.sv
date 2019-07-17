@@ -34,7 +34,7 @@ module pipe_ctrl(
     logic [4:0] en;
     assign { en_if, en_if_id, en_id_ex, en_ex_mem, en_mem_wb } = en;
     
-    wire load_use_stall;
+    logic load_use_stall;
     always_comb begin : set_control_logic
         load_use_stall = 1'd0;
         if(rst)
