@@ -18,8 +18,6 @@ module pipe_ctrl(
         input [4:0]         ex_mem_mem_wb_reg_dest,
         input [4:0]         id_rs,
         input [4:0]         id_rt,
-        input [4:0]         id_rs_slave,
-        input [4:0]         id_rt_slave,
         input               id_branch_taken,
         input               fifo_full,
         input               exp_detect,
@@ -58,8 +56,7 @@ module pipe_ctrl(
             en = 5'b10011;
         else if(id_ex_mem_type == `MEM_LOAD &&
                 ((id_ex_mem_wb_reg_dest == id_rs) ||
-                (id_ex_mem_wb_reg_dest == id_rt) || (id_ex_mem_wb_reg_dest == id_rs_slave) ||
-                (id_ex_mem_wb_reg_dest == id_rt_slave))) begin
+                (id_ex_mem_wb_reg_dest == id_rt))) begin
             en = 5'b10011;
             load_use_stall = 1'd1;
         end
