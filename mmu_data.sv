@@ -222,9 +222,11 @@ module mmu_data(
     // For performance tunning...
     reg [63:0]  cache_hit_counter;
     reg [63:0]  cache_miss_counter;
+    reg [63:0]  cache_swap_counter;
 
     logic       cache_hit;
     logic       cache_miss;
+    logic       cache_swap;
 
     always_ff @(posedge clk) begin
         if(rst) begin
@@ -236,6 +238,15 @@ module mmu_data(
                 cache_hit_counter   <= cache_hit_counter + 64'd1;
             else if(cache_miss)
                 cache_miss_counter  <= cache_miss_counter + 64'd1;
+        end
+    end
+
+    always_ff @(posedge clk) begin
+        if(rst) begin
+            cache_swap_counter <= 64'd0;
+        end
+        else if(cache_swap) begin
+            cache_swap_counter <= cache_swap_counter + 64'd1;
         end
     end
 
@@ -257,6 +268,7 @@ module mmu_data(
         // For perf tunning...
         cache_hit   = 1'd0;
         cache_miss  = 1'd0;
+        cache_swap  = 1'd0;
 
 
         for(int i = 0; i < 16; i++) begin
@@ -308,6 +320,7 @@ module mmu_data(
                 mmu_running = 1'd1;
                 read_en     = 1'd1;
                 read_type   = 1'd0;
+                cache_swap  = dcache_valid[data_index];
                 write_required = dcache_dirty[data_index];
                 if(daddr_req_ok) begin
                     nstate  = CACHED_RWAIT;
