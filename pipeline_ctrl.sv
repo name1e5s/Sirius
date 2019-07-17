@@ -4,6 +4,7 @@
 
 // Pipeline stall control
 module pipe_ctrl(
+        input               clk,
         input               rst,
         input               icache_stall,
         input               ex_stall,
@@ -33,7 +34,9 @@ module pipe_ctrl(
     logic [4:0] en;
     assign { en_if, en_if_id, en_id_ex, en_ex_mem, en_mem_wb } = en;
     
+    wire load_use_stall;
     always_comb begin : set_control_logic
+        load_use_stall = 1'd0;
         if(rst)
             en = 5'b11111;
         else if(icache_stall) begin
@@ -56,10 +59,45 @@ module pipe_ctrl(
         else if(id_ex_mem_type == `MEM_LOAD &&
                 ((id_ex_mem_wb_reg_dest == id_rs) ||
                 (id_ex_mem_wb_reg_dest == id_rt) || (id_ex_mem_wb_reg_dest == id_rs_slave) ||
-                (id_ex_mem_wb_reg_dest == id_rt_slave)))
+                (id_ex_mem_wb_reg_dest == id_rt_slave))) begin
             en = 5'b10011;
+            load_use_stall = 1'd1;
+        end
         else
             en = 5'b11111;
+    end
+
+    // For perftunning...
+    logic [63:0] icache_stall_counter;
+    always_ff @(posedge clk) begin
+        if(rst)
+            icache_stall_counter <= 64'd0;
+        else if(icache_stall)
+            icache_stall_counter <= icache_stall_counter + 64'd1;
+    end
+
+    logic [63:0] mem_stall_counter;
+    always_ff @(posedge clk) begin
+        if(rst)
+            mem_stall_counter <= 64'd0;
+        else if(mem_stall)
+            mem_stall_counter <= mem_stall_counter + 64'd1;
+    end
+
+    logic [63:0] ex_stall_counter;
+    always_ff @(posedge clk) begin
+        if(rst)
+            ex_stall_counter <= 64'd0;
+        else if(ex_stall)
+            ex_stall_counter <= ex_stall_counter + 64'd1;
+    end
+
+    logic [63:0] load_use_stall_counter;
+    always_ff @(posedge clk) begin
+        if(rst)
+            load_use_stall_counter <= 64'd0;
+        else if(load_use_stall)
+            load_use_stall_counter <= load_use_stall_counter + 64'd1;
     end
     
 endmodule

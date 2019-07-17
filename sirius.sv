@@ -214,8 +214,10 @@ module sirius(
     assign              inst_en = ~fifo_full;
     assign              inst_addr = if_pc_address;
 
+
     // Global components
     pipe_ctrl pipe_ctrl0(
+        .clk                    (clk),
         .rst                    (rst),
         .icache_stall           (inst_en & (~inst_ok)),
         .ex_stall               (ex_stall_o),
