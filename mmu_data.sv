@@ -246,10 +246,14 @@ module mmu_data(
     reg [63:0]  cache_hit_counter;
     reg [63:0]  cache_miss_counter;
     reg [63:0]  cache_swap_counter;
+    reg [63:0]  uncached_read_counter;
+    reg [63:0]  uncached_write_counter;
 
     logic       cache_hit;
     logic       cache_miss;
     logic       cache_swap;
+    logic       uncached_read;
+    logic       uncached_write;
 
     always_ff @(posedge clk) begin
         if(rst) begin
@@ -273,6 +277,24 @@ module mmu_data(
         end
     end
 
+    always_ff @(posedge clk) begin
+        if(rst) begin
+            uncached_read_counter <= 64'd0;
+        end
+        else if(uncached_read) begin
+            uncached_read_counter <= uncached_read_counter + 64'd1;
+        end
+    end
+
+    always_ff @(posedge clk) begin
+        if(rst) begin
+            uncached_write_counter <= 64'd0;
+        end
+        else if(uncached_write) begin
+            uncached_write_counter <= uncached_write_counter + 64'd1;
+        end
+    end
+
     // Read channel
     always_comb begin
         data_ok         = 1'd0;
@@ -292,6 +314,8 @@ module mmu_data(
         cache_hit   = 1'd0;
         cache_miss  = 1'd0;
         cache_swap  = 1'd0;
+        uncached_read = 1'd0;
+        uncached_write = 1'd0;
 
 
         for(int i = 0; i < 16; i++) begin
@@ -308,11 +332,13 @@ module mmu_data(
                 if(dwen) begin
                     write_required  = 1'd1;
                     nstate          = UNCACHED_WWAIT;
+                    uncached_write  = 1'd1;
                 end
                 else begin // Read
                     daddr_req       = daddr_psy;
                     read_en         = 1'd1;
                     read_type       = 1'd1;
+                    uncached_read   = 1'd1;
                     if(daddr_req_ok) begin
                         nstate  = UNCACHED_RETURN;
                     end
