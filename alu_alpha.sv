@@ -25,6 +25,7 @@ module alu_alpha(
         output logic                exp_syscal,
         output logic                exp_break,
 
+        output logic [31:0]         ex_address,
         output logic                hilo_wen,
         output logic [63:0]         hilo_result,
         output logic [31:0]         result,
@@ -37,6 +38,8 @@ module alu_alpha(
     wire [31:0] 			     lo = hilo[31:0];
     wire [31:0] 			     add_result = src_a + src_b;
     wire [31:0] 			     sub_result = src_a - src_b;
+
+    assign ex_address = add_result;
 
     // COP0
     assign cop0_addr = {rd, sel};

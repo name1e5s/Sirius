@@ -57,6 +57,10 @@ module mycpu_top(
    wire         ien, iok, iok1, iok2, den, dok;
    wire [ 3:0]	dwen;
    wire [31:0]  iaddr_i, idata_i, idata2_i, daddr_i, drdata_i, dwdata_i;
+
+   wire [31:0]	ex_daddr;
+   wire 		ex_cache_hit;
+   wire 		mem_cache_hit;
    mmu_top mmu_0(
 			.clk                (aclk),
 			.rst                (~aresetn),
@@ -67,6 +71,10 @@ module mycpu_top(
 			.inst_ok_1 	      	(iok1),
 			.inst_ok_2		  	(iok2),
 			.inst_data_2	  	(idata2_i),
+
+			.ex_daddr			(ex_daddr),
+			.ex_cache_hit		(ex_cache_hit),
+			.mem_cache_hit		(mem_cache_hit),
 
             .data_en            (den),
             .data_wen           (dwen),
@@ -126,10 +134,14 @@ module mycpu_top(
 
               .data_en            (den),
               .data_wen           (dwen),
-              .data_addr          (daddr_i),
-              .data_wdata         (dwdata_i),
-              .data_data          (drdata_i),
-              .data_ok            (dok)
+            .data_addr          (daddr_i),
+            .data_wdata         (dwdata_i),
+            .data_data          (drdata_i),
+            .data_ok            (dok),
+
+			.ex_daddr			(ex_daddr),
+			.ex_cache_hit		(ex_cache_hit),
+			.mem_cache_hit		(mem_cache_hit)
 	      );
    
 endmodule

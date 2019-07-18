@@ -19,6 +19,11 @@ module mmu_top(
         output logic            data_ok,
         output logic [31:0]     data_data,
 
+        // Cache pre-hit channel
+        input [31:0]            ex_daddr,
+        output logic            ex_cache_hit,
+        input                   mem_cache_hit,
+
         // AXI
         //ar
         output logic [3 :0]     arid,
@@ -147,6 +152,9 @@ module mmu_top(
     mmu_data data_ctrl(
         .clk            (clk),
         .rst            (rst),
+        .ex_daddr       (ex_daddr),
+        .ex_cache_hit   (ex_cache_hit),
+        .mem_cache_hit  (mem_cache_hit),
         .den            (data_en),
         .dwen           (data_wen),
         .daddr_psy      (daddr_psy),
