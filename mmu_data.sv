@@ -47,6 +47,7 @@ module mmu_data(
 
     enum logic [3:0] {
         IDLE            = 4'b0000,
+        FIFO_WAIT       = 4'b0101,
         CACHED_RSHAKE   = 4'b0001,
         CACHED_RWAIT    = 4'b0100,
         CACHED_REFILL   = 4'b0010,
@@ -151,6 +152,30 @@ module mmu_data(
         .d              (ram_d),
         .we             (ram_we),
         .dpo            (dcache_return)
+    );
+
+    logic [31:0] dfifo_addr;
+    logic [31:0] dfifo_data;
+    logic [3:0]  dfifo_dwen;
+    logic        dfifo_read_en;
+    logic        dfifo_write_en;
+    logic        dfifo_full;
+    logic        dfifo_empty;
+
+
+    data_fifo dfifo(
+        .clk            (clk),
+        .rst            (rst),
+        .addr_in        (daddr_psy),
+        .data_in        (wdata),
+        .dwen_in        (dwen),
+        .addr_out       (dfifo_addr),
+        .data_out       (dfifo_data),
+        .dwen_out       (dfifo_dwen),
+        .read_en        (dfifo_read_en),
+        .write_en       (dfifo_write_en),
+        .full           (dfifo_full),
+        .empty          (dfifo_empty)
     );
 
     always_ff @(posedge clk) begin
@@ -317,6 +342,8 @@ module mmu_data(
         uncached_read = 1'd0;
         uncached_write = 1'd0;
 
+        dfifo_write_en = 1'd0;
+
 
         for(int i = 0; i < 16; i++) begin
             ram_buffer[i] = dcache_return_data[i];
@@ -330,21 +357,26 @@ module mmu_data(
             else if(daddr_type) begin // Uncached access
                 mmu_running = 1'd1;
                 if(dwen) begin
-                    write_required  = 1'd1;
-                    nstate          = UNCACHED_WWAIT;
+                    dfifo_write_en  = ~dfifo_full;
+                    data_ok         = ~dfifo_full;
+                    nstate          = IDLE;
                     uncached_write  = 1'd1;
                 end
                 else begin // Read
-                    daddr_req       = daddr_psy;
-                    read_en         = 1'd1;
-                    read_type       = 1'd1;
-                    uncached_read   = 1'd1;
-                    if(daddr_req_ok) begin
-                        nstate  = UNCACHED_RETURN;
+                    if(dfifo_empty && wcstate == WIDLE) begin
+                        daddr_req       = daddr_psy;
+                        read_en         = 1'd1;
+                        read_type       = 1'd1;
+                        uncached_read   = 1'd1;
+                        if(daddr_req_ok) begin
+                            nstate  = UNCACHED_RETURN;
+                        end
+                        else begin
+                            nstate  = UNCACHED_SHAKE;
+                        end
                     end
-                    else begin
-                        nstate  = UNCACHED_SHAKE;
-                    end
+                    else
+                        nstate = FIFO_WAIT;
                 end
             end
             else if(mem_cache_hit) begin
@@ -365,20 +397,34 @@ module mmu_data(
             end
             else begin // Cache miss
                 cache_miss  = 1'd1;
-                daddr_req   = {daddr_psy[31:6], 6'd0};
-                mmu_running = 1'd1;
-                read_en     = 1'd1;
-                read_type   = 1'd0;
-                cache_swap  = dcache_valid[data_index];
-                write_required = dcache_dirty[data_index];
-                if(daddr_req_ok) begin
-                    nstate  = CACHED_RWAIT;
+                if(dcache_dirty[data_index] && ~(dfifo_empty && wcstate == WIDLE)) begin
+                    nstate = FIFO_WAIT;
                 end
                 else begin
-                    nstate  = CACHED_RSHAKE;
+                    daddr_req   = {daddr_psy[31:6], 6'd0};
+                    mmu_running = 1'd1;
+                    read_en     = 1'd1;
+                    read_type   = 1'd0;
+                    cache_swap  = dcache_valid[data_index];
+                    write_required = dcache_dirty[data_index];
+                    if(daddr_req_ok) begin
+                        nstate  = CACHED_RWAIT;
+                    end
+                    else begin
+                        nstate  = CACHED_RSHAKE;
+                    end
                 end
+
             end
         end
+
+        FIFO_WAIT: begin
+            if(dfifo_empty && (wcstate == WIDLE))
+                nstate = IDLE;
+            else
+                nstate = FIFO_WAIT;
+        end
+
         UNCACHED_SHAKE: begin
             daddr_req   = daddr_psy;
             read_en     = 1'd1;
@@ -468,14 +514,18 @@ module mmu_data(
         dwdata          = 32'd0;
         dwlast          = 1'd0;
 
-        wnstate          = WIDLE;
+        wnstate         = WIDLE;
+
+        // FIFO default value
+        dfifo_read_en   = 1'd0;
+
         case(wcstate)
         WIDLE: begin
-            if(write_required && daddr_type) begin // Uncached write
-                daddr_wreq      = daddr_psy;
+            if(~dfifo_empty) begin // Uncached write
+                daddr_wreq      = dfifo_addr;
                 write_en        = 1'd1;
                 write_type      = 1'd1;
-                write_byte_en   = dwen;
+                write_byte_en   = dfifo_dwen;
                 if(daddr_wreq_ok) begin
                     wnstate = UNCACHED_WWRITE;
                 end
@@ -496,7 +546,7 @@ module mmu_data(
             end
         end
         UNCACHED_WSHAKE: begin
-            daddr_wreq      = daddr_psy;
+            daddr_wreq      = dfifo_addr;
             write_en        = 1'd1;
             write_type      = 1'd1;
             if(daddr_wreq_ok) begin
@@ -507,10 +557,11 @@ module mmu_data(
             end
         end
         UNCACHED_WWRITE: begin
-            write_byte_en   = dwen;
-            dwdata          = wdata;
+            write_byte_en   = dfifo_dwen;
+            dwdata          = dfifo_data;
             dwvalid         = 1'd1;
             dwlast          = 1'd1;
+            dfifo_read_en   = ddata_wready;
             if(ddata_wready)
                 wnstate = UNCACHED_WRESULT;
             else
