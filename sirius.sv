@@ -287,6 +287,7 @@ module sirius(
 
     instruction_fifo instruction_fifo_0(
         .clk                    (clk),
+        .debug_rst              (rst),
         .rst                    (rst || flush || ex_branch_taken),
         .rst_with_delay         (ex_branch_taken && if_id_fifo_empty && ~id_ex_slave_en),
         .master_is_branch       (id_is_branch_instr),
@@ -478,6 +479,14 @@ module sirius(
             id_enable_slave_counter <= 64'd0;
         else if(id_enable_slave)
             id_enable_slave_counter <= id_enable_slave_counter + 64'd1;
+    end
+
+    logic [63:0] branch_nop_counter;
+    always_ff @(posedge clk) begin
+        if(rst)
+            branch_nop_counter <= 64'd0;
+        else if(ex_branch_taken && id_ex_slave_en)
+            branch_nop_counter <= branch_nop_counter + 64'd1;
     end
 
     logic [31:0] id_alu_src_a, id_alu_src_b;

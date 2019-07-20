@@ -2,6 +2,7 @@
 
 module instruction_fifo(
         input                       clk,
+        input                       debug_rst,
         input                       rst,
         input                       rst_with_delay,
         input                       master_is_branch,
@@ -200,5 +201,24 @@ module instruction_fifo(
             address[write_pointer + 4'd1] <= write_address2;
         end
     end
+
+    logic [63:0] master_counter;
+    logic [63:0] slave_counter;
+
+    always_ff @(posedge clk) begin
+        if(debug_rst)
+            master_counter <= 64'd0;
+        else if(read_en1 && (!empty || in_delay_slot))
+            master_counter <= master_counter + 64'd1;
+    end
     
+    always_ff @(posedge clk) begin
+        if(debug_rst)
+            slave_counter <= 64'd0;
+        else if(read_en2 && (!empty && !in_delay_slot && !almost_empty))
+            slave_counter <= slave_counter + 64'd1;
+    end
+
+    wire [63:0] total_inst = master_counter + slave_counter;
+
 endmodule

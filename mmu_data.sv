@@ -299,6 +299,7 @@ module mmu_data(
         end
         else if(cache_swap) begin
             cache_swap_counter <= cache_swap_counter + 64'd1;
+            $display("[DBEUG] Cache swap at index %d for address 0x%08x", data_index, daddr_psy);
         end
     end
 
