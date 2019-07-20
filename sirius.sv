@@ -162,6 +162,10 @@ module sirius(
     reg             id_ex_is_inst;
     reg             id_ex_is_branch;
     reg             id_ex_in_delay_slot;
+    reg [1:0]       id_ex_alu_src;
+    reg             id_ex_alu_imm_src;
+    reg [15:0]      id_ex_immediate;
+    reg [4:0]       id_ex_shamt;
 
     // SLAVE
     reg [31:0]      id_ex_pc_address_slave;
@@ -171,6 +175,12 @@ module sirius(
     reg             id_ex_wb_reg_en_slave;
     reg [ 5:0]      id_ex_alu_op_slave;
     reg             id_ex_slave_en;
+    reg [1:0]       id_ex_alu_src_slave;
+    reg             id_ex_alu_imm_src_slave;
+    reg [15:0]      id_ex_immediate_slave;
+    reg [4:0]       id_ex_shamt_slave;
+    reg [31:0]      id_ex_rs_value_slave;
+    reg [31:0]      id_ex_rt_value_slave;
 
     // EX_MEM SIGNALS
     // MASTER
@@ -489,62 +499,14 @@ module sirius(
             branch_nop_counter <= branch_nop_counter + 64'd1;
     end
 
-    logic [31:0] id_alu_src_a, id_alu_src_b;
-    // Get alu sources
-    always_comb begin : get_alu_src_a
-        if(id_alu_src == `SRC_SFT)
-            id_alu_src_a = { 27'd0 ,id_shamt};
-        else if(id_alu_src == `SRC_PCA)
-            id_alu_src_a = if_id_pc_address + 32'd8;
-        else
-            id_alu_src_a = rs_value;
-    end
-
-    always_comb begin: get_alu_src_b
-        unique case(id_alu_src)
-            `SRC_IMM: begin
-            if(id_alu_imm_src)
-                id_alu_src_b = { 16'd0, id_immediate };
-            else
-                id_alu_src_b = { {16{id_immediate[15]}}, id_immediate};
-            end
-            default:
-                id_alu_src_b = rt_value;
-        endcase
-    end
-
-    logic [31:0] id_alu_src_a_slave, id_alu_src_b_slave;
-    always_comb begin : get_alu_src_a_slave
-        if(id_alu_src_slave == `SRC_SFT)
-            id_alu_src_a_slave = { 27'd0 ,id_shamt_slave};
-        else if(id_alu_src_slave == `SRC_PCA)
-            id_alu_src_a_slave = if_id_pc_address_slave + 32'd8;
-        else
-            id_alu_src_a_slave = rs_value_slave;
-    end
-
-    always_comb begin: get_alu_src_b_slave
-        unique case(id_alu_src_slave)
-            `SRC_IMM: begin
-            if(id_alu_imm_src_slave)
-                id_alu_src_b_slave = { 16'd0, id_immediate_slave };
-            else
-                id_alu_src_b_slave = { {16{id_immediate_slave[15]}}, id_immediate_slave};
-            end
-            default:
-                id_alu_src_b_slave = rt_value_slave;
-        endcase
-    end
-
     reg [2:0] id_ex_branch_type;
+
     always_ff @(posedge clk) begin
         if(rst || (!id_ex_en && ex_mem_en) || flush || (id_ex_en && ex_branch_taken && id_ex_slave_en)) begin
             id_ex_pc_address        <= 32'd0;
             id_ex_instruction       <= 32'd0;
             id_ex_rs_value          <= 32'd0;
             id_ex_rt_value          <= 32'd0;
-            id_ex_alu_src_a         <= 32'd0;
-            id_ex_alu_src_b         <= 32'd0;
             id_ex_mem_type          <= `MEM_NOOP;
             id_ex_mem_size          <= `SZ_FULL;
             id_ex_mem_unsigned_flag <= 1'b0;
@@ -560,14 +522,16 @@ module sirius(
             id_ex_in_delay_slot     <= 1'd0;
             id_ex_is_branch         <= 1'd0;
             id_ex_branch_type       <= 3'd0;
+            id_ex_alu_src           <= 2'd0;
+            id_ex_alu_imm_src       <= 1'd0;
+            id_ex_immediate         <= 16'd0;
+            id_ex_shamt             <= 5'd0;
         end
         else if(id_ex_en) begin 
             id_ex_pc_address        <= if_id_pc_address;
             id_ex_instruction       <= if_id_instruction;
             id_ex_rs_value          <= rs_value;
             id_ex_rt_value          <= rt_value;
-            id_ex_alu_src_a         <= id_alu_src_a;
-            id_ex_alu_src_b         <= id_alu_src_b;
             id_ex_mem_type          <= id_mem_type;
             id_ex_mem_size          <= id_mem_size;
             id_ex_mem_unsigned_flag <= id_unsigned_flag;
@@ -583,6 +547,10 @@ module sirius(
             id_ex_in_delay_slot     <= if_id_in_delay_slot;
             id_ex_is_branch         <= id_is_branch_instr;
             id_ex_branch_type       <= id_branch_type;
+            id_ex_alu_src           <= id_alu_src;
+            id_ex_alu_imm_src       <= id_alu_imm_src;
+            id_ex_immediate         <= id_immediate;
+            id_ex_shamt             <= id_shamt;
         end
     end
 
@@ -591,24 +559,79 @@ module sirius(
     always_ff @(posedge clk) begin
         if(rst || (!id_ex_en && ex_mem_en) || flush || (id_ex_en && !id_enable_slave) || (id_ex_en && ex_branch_taken)) begin
             id_ex_pc_address_slave      <= 32'd0;
-            id_ex_alu_src_a_slave       <= 32'd0;
-            id_ex_alu_src_b_slave       <= 32'd0;
             id_ex_wb_reg_dest_slave     <= 5'd0;
             id_ex_wb_reg_en_slave       <= 1'd0;
             id_ex_alu_op_slave          <= 6'd0;
             id_ex_undefined_inst_slave  <= 1'd0;
             id_ex_slave_en              <= 1'd0;
+            id_ex_alu_src_slave         <= 2'd0;
+            id_ex_alu_imm_src_slave     <= 1'd0;
+            id_ex_immediate_slave       <= 16'd0;
+            id_ex_shamt_slave           <= 5'd0;
+            id_ex_rs_value_slave        <= 32'd0;
+            id_ex_rt_value_slave        <= 32'd0;
         end
         else if(id_ex_en) begin
             id_ex_pc_address_slave      <= if_id_pc_address_slave;
-            id_ex_alu_src_a_slave       <= id_alu_src_a_slave;
-            id_ex_alu_src_b_slave       <= id_alu_src_b_slave;
             id_ex_wb_reg_dest_slave     <= id_wb_reg_dest_slave;
             id_ex_wb_reg_en_slave       <= id_wb_reg_en_slave;
             id_ex_alu_op_slave          <= id_alu_op_slave;
             id_ex_undefined_inst_slave  <= id_undefined_inst_slave;
             id_ex_slave_en              <= id_enable_slave;
+            id_ex_alu_src_slave         <= id_alu_src_slave;
+            id_ex_alu_imm_src_slave     <= id_alu_imm_src_slave;
+            id_ex_immediate_slave       <= id_immediate_slave;
+            id_ex_shamt_slave           <= id_shamt_slave;
+            id_ex_rs_value_slave        <= rs_value_slave;
+            id_ex_rt_value_slave        <= rt_value_slave;
         end
+    end
+
+    logic [31:0] ex_alu_src_a, ex_alu_src_b;
+    // Get alu sources
+    always_comb begin : get_alu_src_a
+        if(id_ex_alu_src == `SRC_SFT)
+            ex_alu_src_a = { 27'd0 ,id_ex_shamt};
+        else if(id_ex_alu_src == `SRC_PCA)
+            ex_alu_src_a = id_ex_pc_address + 32'd8;
+        else
+            ex_alu_src_a = id_ex_rs_value;
+    end
+
+    always_comb begin: get_alu_src_b
+        unique case(id_ex_alu_src)
+            `SRC_IMM: begin
+            if(id_ex_alu_imm_src)
+                ex_alu_src_b = { 16'd0, id_ex_immediate };
+            else
+                ex_alu_src_b = { {16{id_ex_immediate[15]}}, id_ex_immediate};
+            end
+            default:
+                ex_alu_src_b = id_ex_rt_value;
+        endcase
+    end
+
+    logic [31:0] ex_alu_src_a_slave, ex_alu_src_b_slave;
+    always_comb begin : get_alu_src_a_slave
+        if(id_ex_alu_src_slave == `SRC_SFT)
+            ex_alu_src_a_slave = { 27'd0 ,id_ex_shamt_slave};
+        else if(id_ex_alu_src_slave == `SRC_PCA)
+            ex_alu_src_a_slave = id_ex_pc_address_slave + 32'd8;
+        else
+            ex_alu_src_a_slave = id_ex_rs_value_slave;
+    end
+
+    always_comb begin: get_alu_src_b_slave
+        unique case(id_ex_alu_src_slave)
+            `SRC_IMM: begin
+            if(id_ex_alu_imm_src_slave)
+                ex_alu_src_b_slave = { 16'd0, id_ex_immediate_slave };
+            else
+                ex_alu_src_b_slave = { {16{id_ex_immediate_slave[15]}}, id_ex_immediate_slave};
+            end
+            default:
+                ex_alu_src_b_slave = id_ex_rt_value_slave;
+        endcase
     end
 
     branch branch_unit(
@@ -645,8 +668,8 @@ module sirius(
         .rst                (rst),
         .flush_i            (exp_detect),
         .alu_op             (id_ex_alu_op),
-        .src_a              (id_ex_alu_src_a),
-        .src_b              (id_ex_alu_src_b),
+        .src_a              (ex_alu_src_a),
+        .src_b              (ex_alu_src_b),
         .src_hilo           (ex_hilo_value),
         .rd                 (id_ex_rd_addr),
         .sel                (id_ex_sel),
@@ -668,8 +691,8 @@ module sirius(
         .clk                (clk),
         .rst                (rst),
         .alu_op             (id_ex_alu_op_slave),
-        .src_a              (id_ex_alu_src_a_slave),
-        .src_b              (id_ex_alu_src_b_slave),
+        .src_a              (ex_alu_src_a_slave),
+        .src_b              (ex_alu_src_b_slave),
         .exp_overflow       (ex_exp_overflow_slave),
         .result             (ex_result_slave)
     );
