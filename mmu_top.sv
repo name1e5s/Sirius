@@ -92,7 +92,7 @@ module mmu_top(
 
     always_comb begin
         iaddr_psy   = {3'd0, inst_addr[28:0]};
-        iaddr_type  = 1'd0;
+        iaddr_type  = inst_addr[29];
         daddr_psy   = {3'd0, data_addr[28:0]};
         daddr_type  = data_addr[29];
     end
