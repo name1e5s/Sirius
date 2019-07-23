@@ -240,7 +240,7 @@ module mmu_inst(
             inst_ok_1   = idata_rvalid;
             inst_data_1 = idata_rdata;
             mmu_running = 1'd1;
-            if(idata_rlast) begin
+            if(idata_rvalid && idata_rlast) begin
                 nstate  = IDLE;
             end
             else begin
@@ -261,7 +261,7 @@ module mmu_inst(
         end
         CACHED_WAIT: begin
             mmu_running = 1'd1;
-            if(idata_rlast) begin
+            if(idata_rvalid && idata_rlast) begin
                 nstate  = CACHED_REFILL;
             end
             else begin

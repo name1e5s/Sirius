@@ -442,7 +442,7 @@ module mmu_data(
             data_ok     = ddata_rvalid;
             data_data   = ddata_rdata;
             mmu_running = 1'd1;
-            if(ddata_rlast) begin
+            if(ddata_rvalid && ddata_rlast) begin
                 nstate  = IDLE;
             end
             else begin
@@ -472,10 +472,10 @@ module mmu_data(
         end
         CACHED_RWAIT: begin
             mmu_running = 1'd1;
-            if(ddata_rlast && wcstate == WIDLE) begin
+            if(ddata_rvalid && ddata_rlast && wcstate == WIDLE) begin
                 nstate  = CACHED_REFILL;
             end
-            else if(ddata_rlast) begin
+            else if(ddata_rvalid && ddata_rlast) begin
                 nstate = CACHED_WWAIT;
             end
             else begin
