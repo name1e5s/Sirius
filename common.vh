@@ -12,6 +12,8 @@
 `define SZ_FULL         3'b111
 `define SZ_HALF         3'b010
 `define SZ_BYTE         3'b000
+`define SZ_LEFT         3'b101 
+`define SZ_RIGH         3'b110
 
 `define SRC_REG         2'd0
 `define SRC_IMM         2'd1

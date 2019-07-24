@@ -72,6 +72,50 @@ module memory(
                         mem_wen = 4'b0000;
                     endcase
                 end
+                SZ_LEFT: begin
+                    unique case(address[1:0])
+                    2'd0: begin
+                        mem_wen = 4'b0001;
+                        mem_wdata = {4{rt_value[31:24]}};
+                    end
+                    2'd1: begin
+                        mem_wen = 4'b0011;
+                        mem_wdata = {2{rt_value[31:16]}};
+                    end
+                    2'd2: begin
+                        mem_wen = 4'b0111;
+                        mem_wdata = {8'd0,{rt_value[31:8]}};
+                    end
+                    2'd3: begin
+                        mem_wen = 4'b1111;
+                        mem_wdata = rt_value;
+                    end
+                    default:
+                        mem_wen = 4'b0000;
+                    endcase
+                end
+                SZ_RIGH: begin
+                    unique case(address[1:0])
+                    2'd0: begin
+                        mem_wen = 4'b1111;
+                        mem_wdata = rt_value;
+                    end
+                    2'd1: begin
+                        mem_wen = 4'b1110;
+                        mem_wdata = {rt_value[23:0],8'd0};
+                    end
+                    2'd2: begin
+                        mem_wen = 4'b1100;
+                        mem_wdata = {2{rt_value[15:0]}};
+                    end
+                    2'd3: begin
+                        mem_wen = 4'b1000;
+                        mem_wdata = {4{rt_value[7:0]}};
+                    end
+                    default:
+                        mem_wen = 4'b0000;
+                    endcase
+                end
                 default:
                     mem_wen = 4'b1111;
                 endcase
