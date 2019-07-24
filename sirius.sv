@@ -23,12 +23,7 @@ module sirius(
         output logic [31:0]     data_addr,
         output logic [31:0]     data_wdata,
         input                   data_ok,
-        input [31:0]            data_data,
-
-        // Cache pre hit-detect channel
-        output logic [31:0]     ex_daddr,
-        input                   ex_cache_hit,
-        output logic            mem_cache_hit
+        input [31:0]            data_data
 );
 
     wire                if_en, if_id_en, id_ex_en, ex_mem_en, mem_wb_en;
@@ -683,8 +678,7 @@ module sirius(
         .hilo_wen           (ex_hilo_wen),
         .hilo_result        (ex_hilo_result),
         .result             (ex_result),
-        .stall_o            (ex_stall_o),
-        .ex_address         (ex_daddr)
+        .stall_o            (ex_stall_o)
     );
 
     alu_beta alu_beta(
@@ -696,8 +690,6 @@ module sirius(
         .exp_overflow       (ex_exp_overflow_slave),
         .result             (ex_result_slave)
     );
-
-    reg ex_mem_cache_hit;
 
     always_ff @(posedge clk) begin
         if(rst || (!ex_mem_en && mem_wb_en) || flush) begin
@@ -725,7 +717,6 @@ module sirius(
             ex_mem_is_branch            <= 1'd0;
             ex_mem_hilo_wen             <= 1'd0;
             ex_mem_hilo_result          <= 64'd0;
-            ex_mem_cache_hit            <= 1'd0;
         end
         else if(ex_mem_en) begin 
             ex_mem_cp0_wen              <= ex_cop0_wen;
@@ -752,11 +743,8 @@ module sirius(
             ex_mem_is_branch            <= id_ex_is_branch;
             ex_mem_hilo_wen             <= ex_hilo_wen;
             ex_mem_hilo_result          <= ex_hilo_result;
-            ex_mem_cache_hit            <= ex_cache_hit;
         end
     end
-
-    assign mem_cache_hit = ex_mem_cache_hit;
 
     always_ff @(posedge clk) begin
         if(rst || (!ex_mem_en && mem_wb_en) || flush) begin
