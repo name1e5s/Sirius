@@ -31,6 +31,7 @@
 `define ALU_BREK    6'd28
 
 // MIPS32r2
+`define ALU_MUL     6'd29
 `define ALU_CLO     6'd30 
 `define ALU_CLZ     6'd31
 `define ALU_MADD    6'd32

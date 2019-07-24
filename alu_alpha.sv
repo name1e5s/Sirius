@@ -92,7 +92,7 @@ module alu_alpha(
                 div_op = 2'b10;
             `ALU_DIVU:
                 div_op = 2'b01;
-            `ALU_MULT, `ALU_MADD, `ALU_MSUB:
+            `ALU_MULT, `ALU_MADD, `ALU_MSUB, `ALU_MUL:
                 mult_op = 2'b10;
             `ALU_MULTU, `ALU_MADDU, `ALU_MSUBU:
                 mult_op = 2'b01;
@@ -169,6 +169,8 @@ module alu_alpha(
                 result = {26'd0,clo_result};
             `ALU_CLZ:
                 result = {26'd0,clz_result};
+            `ALU_MUL:
+                result = _hilo_mult[31:0];
             default:
                 result = 32'h0000_0000; // Prevent dcache error
         endcase
