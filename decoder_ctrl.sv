@@ -213,6 +213,14 @@ module decoder_ctrl(
                     {`ALU_SLL, `SRC_SFT, `SIGN_EXTENDED, `MEM_NOOP, `SZ_FULL, rd, 1'b0, `ZERO_EXTENDED};
                 priv_inst = 1'b1;
             end
+            {6'b000000, 6'b001111}: // SYSC -- sa NOP
+                {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
+                    {`ALU_SLL, `SRC_SFT, `SIGN_EXTENDED, `MEM_NOOP, `SZ_FULL, rd, 1'b0, `ZERO_EXTENDED};
+            {6'b010000, 6'b100000}: begin // WAIT -- as NOP
+                {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
+                    {`ALU_SLL, `SRC_SFT, `SIGN_EXTENDED, `MEM_NOOP, `SZ_FULL, rd, 1'b0, `ZERO_EXTENDED};
+                priv_inst = 1'b1;
+            end
             // MIPS32r1 end
             default: begin
                 if(is_branch && is_branch_al)
