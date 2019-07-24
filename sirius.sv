@@ -96,9 +96,11 @@ module sirius(
     wire                ex_exp_break;
     wire [31:0]         ex_result;
     wire                ex_stall_o;
+    wire                ex_reg_en;
 
     wire                ex_exp_overflow_slave;
     wire [31:0]         ex_result_slave;
+    wire                ex_reg_en_slave;
 
     // MEM SIGNALS
     wire                mem_exception_taken = flush;
@@ -387,10 +389,10 @@ module sirius(
     );
 
     forwarding_unit forwarding_rs(
-        .slave_ex_reg_en    (id_ex_wb_reg_en_slave),
+        .slave_ex_reg_en    (id_ex_wb_reg_en_slave & ex_reg_en_slave),
         .slave_ex_addr      (id_ex_wb_reg_dest_slave),
         .slave_ex_data      (ex_result_slave),
-        .master_ex_reg_en   (id_ex_wb_reg_en),
+        .master_ex_reg_en   (id_ex_wb_reg_en & ex_reg_en),
         .master_ex_addr     (id_ex_wb_reg_dest),
         .master_ex_data     (ex_result),
         .slave_mem_reg_en   (ex_mem_wb_reg_en_slave),
@@ -405,10 +407,10 @@ module sirius(
     );
 
     forwarding_unit forwarding_rt(
-        .slave_ex_reg_en    (id_ex_wb_reg_en_slave),
+        .slave_ex_reg_en    (id_ex_wb_reg_en_slave & ex_reg_en_slave),
         .slave_ex_addr      (id_ex_wb_reg_dest_slave),
         .slave_ex_data      (ex_result_slave),
-        .master_ex_reg_en   (id_ex_wb_reg_en),
+        .master_ex_reg_en   (id_ex_wb_reg_en & ex_reg_en),
         .master_ex_addr     (id_ex_wb_reg_dest),
         .master_ex_data     (ex_result),
         .slave_mem_reg_en   (ex_mem_wb_reg_en_slave),
@@ -423,10 +425,10 @@ module sirius(
     );
 
     forwarding_unit forwarding_rs_slave(
-        .slave_ex_reg_en    (id_ex_wb_reg_en_slave),
+        .slave_ex_reg_en    (id_ex_wb_reg_en_slave & ex_reg_en_slave),
         .slave_ex_addr      (id_ex_wb_reg_dest_slave),
         .slave_ex_data      (ex_result_slave),
-        .master_ex_reg_en   (id_ex_wb_reg_en),
+        .master_ex_reg_en   (id_ex_wb_reg_en & ex_reg_en),
         .master_ex_addr     (id_ex_wb_reg_dest),
         .master_ex_data     (ex_result),
         .slave_mem_reg_en   (ex_mem_wb_reg_en_slave),
@@ -441,10 +443,10 @@ module sirius(
     );
 
     forwarding_unit forwarding_rt_slave(
-        .slave_ex_reg_en    (id_ex_wb_reg_en_slave),
+        .slave_ex_reg_en    (id_ex_wb_reg_en_slave & ex_reg_en_slave),
         .slave_ex_addr      (id_ex_wb_reg_dest_slave),
         .slave_ex_data      (ex_result_slave),
-        .master_ex_reg_en   (id_ex_wb_reg_en),
+        .master_ex_reg_en   (id_ex_wb_reg_en & ex_reg_en),
         .master_ex_addr     (id_ex_wb_reg_dest),
         .master_ex_data     (ex_result),
         .slave_mem_reg_en   (ex_mem_wb_reg_en_slave),
@@ -678,7 +680,8 @@ module sirius(
         .hilo_wen           (ex_hilo_wen),
         .hilo_result        (ex_hilo_result),
         .result             (ex_result),
-        .stall_o            (ex_stall_o)
+        .stall_o            (ex_stall_o),
+        .ex_reg_en          (ex_reg_en)
     );
 
     alu_beta alu_beta(
@@ -688,7 +691,8 @@ module sirius(
         .src_a              (ex_alu_src_a_slave),
         .src_b              (ex_alu_src_b_slave),
         .exp_overflow       (ex_exp_overflow_slave),
-        .result             (ex_result_slave)
+        .result             (ex_result_slave),
+        .ex_reg_en          (ex_reg_en_slave)
     );
 
     always_ff @(posedge clk) begin
@@ -737,7 +741,7 @@ module sirius(
             ex_mem_pc_address           <= id_ex_pc_address;
             ex_mem_mem_address          <= ex_result;
             ex_mem_wb_reg_dest          <= id_ex_wb_reg_dest;
-            ex_mem_wb_reg_en            <= id_ex_wb_reg_en;
+            ex_mem_wb_reg_en            <= id_ex_wb_reg_en & ex_reg_en;
             ex_mem_branch_link          <= id_ex_is_branch_link;
             ex_mem_is_inst              <= id_ex_is_inst;
             ex_mem_is_branch            <= id_ex_is_branch;
@@ -759,7 +763,7 @@ module sirius(
             ex_mem_pc_address_slave     <= id_ex_pc_address_slave;
             ex_mem_result_slave         <= ex_result_slave;
             ex_mem_wb_reg_dest_slave    <= id_ex_wb_reg_dest_slave;
-            ex_mem_wb_reg_en_slave      <= id_ex_wb_reg_en_slave;
+            ex_mem_wb_reg_en_slave      <= id_ex_wb_reg_en_slave & ex_reg_en_slave;
             ex_mem_overflow_slave       <= ex_exp_overflow_slave;
             ex_mem_undefined_inst_slave <= id_ex_undefined_inst_slave;
         end

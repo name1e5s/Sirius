@@ -38,3 +38,5 @@
 `define ALU_MADDU   6'd33
 `define ALU_MSUB    6'd34
 `define ALU_MSUBU   6'd35
+`define ALU_MOVN    6'd36
+`define ALU_MOVZ    6'd37

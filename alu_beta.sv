@@ -10,6 +10,7 @@ module alu_beta(
         input [31:0]                src_a,
         input [31:0]                src_b,
 
+        output logic                ex_reg_en,
         output logic                exp_overflow,
         output logic [31:0]         result
 );
@@ -45,7 +46,7 @@ module alu_beta(
                 result = $signed(src_b) >>> src_a[4:0];
             `ALU_SRL:
                 result = src_b >> src_a[4:0];
-            `ALU_OUTA:
+            `ALU_OUTA, `ALU_MOVN, `ALU_MOVZ:
                 result = src_a;
             `ALU_OUTB:
                 result = src_b;
@@ -55,6 +56,17 @@ module alu_beta(
                 result = {26'd0,clz_result};
             default:
                 result = 32'h0000_0000;
+        endcase
+    end
+
+    always_comb begin : set_reg_en
+        unique case(alu_op)
+        `ALU_MOVN:
+            ex_reg_en = (src_b != 32'd0);
+        `ALU_MOVZ:
+            ex_reg_en = (src_b == 32'd0);
+        default:
+            ex_reg_en = 1'd1;
         endcase
     end
 

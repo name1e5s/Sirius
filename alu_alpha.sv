@@ -25,6 +25,7 @@ module alu_alpha(
         output logic                exp_syscal,
         output logic                exp_break,
 
+        output logic                ex_reg_en,
         output logic                hilo_wen,
         output logic [63:0]         hilo_result,
         output logic [31:0]         result,
@@ -157,7 +158,7 @@ module alu_alpha(
                 result = hi;
             `ALU_MFLO:
                 result = lo;
-            `ALU_OUTA:
+            `ALU_OUTA, `ALU_MOVN, `ALU_MOVZ:
                 result = src_a;
             `ALU_OUTB:
                 result = src_b;
@@ -173,6 +174,17 @@ module alu_alpha(
                 result = _hilo_mult[31:0];
             default:
                 result = 32'h0000_0000; // Prevent dcache error
+        endcase
+    end
+
+    always_comb begin : set_reg_en
+        unique case(alu_op)
+        `ALU_MOVN:
+            ex_reg_en = (src_b != 32'd0);
+        `ALU_MOVZ:
+            ex_reg_en = (src_b == 32'd0);
+        default:
+            ex_reg_en = 1'd1;
         endcase
     end
 
