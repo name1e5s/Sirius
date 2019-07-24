@@ -29,3 +29,7 @@
 `define ALU_ERET    6'd26
 `define ALU_SYSC    6'd27
 `define ALU_BREK    6'd28
+
+// MIPS32r2
+`define ALU_CLO     6'd30 
+`define ALU_CLZ     6'd31
