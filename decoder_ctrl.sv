@@ -221,12 +221,18 @@ module decoder_ctrl(
                     {`ALU_SLL, `SRC_SFT, `SIGN_EXTENDED, `MEM_NOOP, `SZ_FULL, rd, 1'b0, `ZERO_EXTENDED};
                 priv_inst = 1'b1;
             end
-            {6'b101011, 6'bxxxxxx}: // SWL
+            {6'b101010, 6'bxxxxxx}: // SWL
                 {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
                     {`ALU_ADDU, `SRC_IMM, `SIGN_EXTENDED, `MEM_STOR, `SZ_LEFT, rt, 1'b0, `ZERO_EXTENDED};
-            {6'b101011, 6'bxxxxxx}: // SWR
+            {6'b101110, 6'bxxxxxx}: // SWR
                 {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
                     {`ALU_ADDU, `SRC_IMM, `SIGN_EXTENDED, `MEM_STOR, `SZ_RIGH, rt, 1'b0, `ZERO_EXTENDED};
+            {6'b100010, 6'bxxxxxx}: // LWL
+                {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
+                    {`ALU_ADDU, `SRC_IMM, `SIGN_EXTENDED, `MEM_LOAD, `SZ_LEFT, rt, 1'b1, `ZERO_EXTENDED};
+            {6'b100110, 6'bxxxxxx}: // LWR
+                {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
+                    {`ALU_ADDU, `SRC_IMM, `SIGN_EXTENDED, `MEM_LOAD, `SZ_RIGH, rt, 1'b1, `ZERO_EXTENDED};
             // MIPS32r1 end
             default: begin
                 if(is_branch && is_branch_al)

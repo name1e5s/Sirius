@@ -147,6 +147,30 @@ module memory(
                                 {{24{mem_rdata[7]}}, mem_rdata[7:0]};
                     endcase
                 end
+                `SZ_LEFT: begin
+                    unique case(address[1:0])
+                    2'b00:
+                        result = {mem_rdata[7:0],rt_value[23:0]};
+                    2'b01:
+                        result = {mem_rdata[16:0],rt_value[16:0]};
+                    2'b10:
+                        result = {mem_rdata[23:0],rt_value[7:0]};
+                    default:
+                        result = mem_rdata;
+                    endcase
+                end
+                `SZ_RIGHT: begin
+                    unique case(address[1:0])
+                    2'b00:
+                        result = mem_rdata;
+                    2'b01:
+                        result = {rt_value[31:24],mem_rdata[31:8]};
+                    2'b10:
+                        result = {rt_value[31:16],mem_rdata[31:16]};
+                    default:
+                        result = {rt_value[31:8],mem_rdata[31:24]};
+                    endcase
+                end
                 default:
                     result = mem_rdata;
                 endcase
