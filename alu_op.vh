@@ -33,3 +33,7 @@
 // MIPS32r2
 `define ALU_CLO     6'd30 
 `define ALU_CLZ     6'd31
+`define ALU_MADD    6'd32
+`define ALU_MADDU   6'd33
+`define ALU_MSUB    6'd34
+`define ALU_MSUBU   6'd35

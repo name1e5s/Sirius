@@ -92,9 +92,9 @@ module alu_alpha(
                 div_op = 2'b10;
             `ALU_DIVU:
                 div_op = 2'b01;
-            `ALU_MULT:
+            `ALU_MULT, `ALU_MADD, `ALU_MSUB:
                 mult_op = 2'b10;
-            `ALU_MULTU:
+            `ALU_MULTU, `ALU_MADDU, `ALU_MSUBU:
                 mult_op = 2'b01;
             default: begin
                 mdu_prepare = 1'b0;
@@ -191,8 +191,16 @@ module alu_alpha(
         hilo_result = 64'd0;
         if(div_commit)
             hilo_result = _hilo_div;
-        else if(mult_commit)
-            hilo_result = _hilo_mult;
+        else if(mult_commit) begin
+            unique case(alu_op)
+                `ALU_MSUB, `ALU_MSUBU:
+                    hilo_result = src_hilo - _hilo_mult;
+                `ALU_MADD, `ALU_MADDU:
+                    hilo_result = _hilo_mult + src_hilo;
+                default:
+                    hilo_result = _hilo_mult;
+            endcase 
+        end
         else begin
             unique case(alu_op)
             `ALU_MTHI:
