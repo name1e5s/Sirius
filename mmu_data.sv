@@ -170,16 +170,6 @@ module mmu_data(
         .empty          (dfifo_empty)
     );
 
-    always_ff @(posedge clk) begin
-        if(rst) begin
-            for(int i = 0; i < 128; i++)
-                data_tag_buffer[i] <= 19'd0;
-        end
-        else if(nstate == CACHED_REFILL) begin
-            data_tag_buffer[data_index] <= data_tag;
-        end
-    end
-
     always_ff @(posedge clk) begin : update_status
         if(rst)
             cstate <= IDLE;
