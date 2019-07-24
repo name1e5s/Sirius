@@ -146,7 +146,6 @@ module mmu_data(
         .dpo            (dcache_return)
     );
 
-<<<<<<< HEAD
     logic [31:0] dfifo_addr;
     logic [31:0] dfifo_data;
     logic [3:0]  dfifo_dwen;
@@ -181,8 +180,6 @@ module mmu_data(
         end
     end
 
-=======
->>>>>>> parent of af0b655... SiriusP: move dcache hit check to EX stage
     always_ff @(posedge clk) begin : update_status
         if(rst)
             cstate <= IDLE;
