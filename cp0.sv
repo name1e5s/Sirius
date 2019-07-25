@@ -113,7 +113,7 @@ module cp0(
                     { 5'd3 , 3'd0 }:
                         EntryLo1[29:0] <= wdata[29:0];
                     { 5'd5, 3'd0 }:
-                        PageMask[24:13] <= wdata[24:13];
+                        PageMask[28:13] <= wdata[28:13];
                     { 5'd0, 5'd0 }:
                         Index[3:0] <= wdata[3:0]; // Only 16 entries here...
                     default: begin
