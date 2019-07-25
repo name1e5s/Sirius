@@ -21,17 +21,25 @@ module cp0(
         input [31:0]                exp_epc,
         input                       exl_clean,
 
+        // TLB...
+        input                       exp_probe_failure,
+
         output logic [31:0]         epc_address,
         output logic                allow_interrupt,
         output logic [7:0]          interrupt_flag
 );
    
     // Control register definition
-    reg [31:0] 		       BadVAddr;
-    reg [32:0] 		       Count;
-    reg [31:0] 		       Status;
-    reg [31:0] 		       Cause;
-    reg [31:0] 		       EPC;
+    reg [31:0] 		        BadVAddr;
+    reg [32:0] 		        Count;
+    reg [31:0] 		        Status;
+    reg [31:0] 		        Cause;
+    reg [31:0] 		        EPC;
+    reg [31:0]              EntryHi;
+    reg [31:0]              EntryLo0;
+    reg [31:0]              EntryLo1;
+    reg [31:0]              PageMask;
+    reg [31:0]              Index;
 
     assign epc_address       = EPC;
     assign allow_interrupt   = Status[2:0] == 3'b001;
@@ -49,6 +57,18 @@ module cp0(
                 rdata = Cause;
             { 5'd14, 3'd0 }:
                 rdata = EPC;
+            // SiriusG begin
+            { 5'd10, 3'd0 }:
+                rdata = EntryHi;
+            { 5'd2, 3'd0 }:
+                rdata = EntryLo0;
+            { 5'd3, 3'd0 }:
+                rdata = EntryLo1;
+            { 5'd5, 3'd0 }:
+                rdata = PageMask;
+            { 5'd0, 5'd0 }:
+                rdata = Index;
+            // SiriusG end
             default:
                 rdata = 32'd0;
         endcase
@@ -63,6 +83,11 @@ module cp0(
             Status[7:2] <= 6'd0;
             Status[1:0] <= 2'b0;
             Cause <= 32'd0;
+            EntryHi <= 32'd0;
+            EntryLo0[31:30] <= 2'd0;
+            EntryLo1[31:30] <= 2'd0;
+            PageMask <= 32'd0;
+            Index <= 32'd0;
         end
         else begin
             Cause[15:10] <= hint;
@@ -79,6 +104,18 @@ module cp0(
                         Cause[9:8] <= wdata[9:8];
                     { 5'd14 , 3'd0 }:
                         EPC <= wdata;
+                    { 5'd10, 3'd0}: begin
+                        EntryHi[31:13]  <= wdata[31:13];
+                        EntryHi[7:0]    <= wdata[7:0];
+                    end
+                    { 5'd2 , 3'd0 }:
+                        EntryLo0[29:0] <= wdata[29:0];
+                    { 5'd3 , 3'd0 }:
+                        EntryLo1[29:0] <= wdata[29:0];
+                    { 5'd5, 3'd0 }:
+                        PageMask[24:13] <= wdata[24:13];
+                    { 5'd0, 5'd0 }:
+                        Index[3:0] <= wdata[3:0]; // Only 16 entries here...
                     default: begin
                         // Make vivado happy. :)
                     end
@@ -91,6 +128,7 @@ module cp0(
                 Cause[31] <= exp_bd;
                 Cause[6:2] <= exp_code;
                 EPC <= exp_epc;
+                Index[31] <= exp_probe_failure;
             end
         end
     end
