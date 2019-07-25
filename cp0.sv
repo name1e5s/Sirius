@@ -38,7 +38,6 @@ module cp0(
     reg [31:0]              EntryHi;
     reg [31:0]              EntryLo0;
     reg [31:0]              EntryLo1;
-    reg [31:0]              PageMask;
     reg [31:0]              Index;
 
     assign epc_address       = EPC;
@@ -64,8 +63,6 @@ module cp0(
                 rdata = EntryLo0;
             { 5'd3, 3'd0 }:
                 rdata = EntryLo1;
-            { 5'd5, 3'd0 }:
-                rdata = PageMask;
             { 5'd0, 5'd0 }:
                 rdata = Index;
             // SiriusG end
@@ -86,7 +83,6 @@ module cp0(
             EntryHi <= 32'd0;
             EntryLo0[31:30] <= 2'd0;
             EntryLo1[31:30] <= 2'd0;
-            PageMask <= 32'd0;
             Index <= 32'd0;
         end
         else begin
@@ -112,8 +108,6 @@ module cp0(
                         EntryLo0[29:0] <= wdata[29:0];
                     { 5'd3 , 3'd0 }:
                         EntryLo1[29:0] <= wdata[29:0];
-                    { 5'd5, 3'd0 }:
-                        PageMask[28:13] <= wdata[28:13];
                     { 5'd0, 5'd0 }:
                         Index[3:0] <= wdata[3:0]; // Only 16 entries here...
                     default: begin
