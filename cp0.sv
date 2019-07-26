@@ -21,6 +21,10 @@ module cp0(
         input [31:0]                exp_epc,
         input                       exl_clean,
 
+        // TLB instructions
+        input                       tlbr,
+        input                       tlbp,
+
         // TLB...
         input                       miss_probe,
         input [3:0]                 matched_index_probe,
@@ -102,7 +106,16 @@ module cp0(
         else begin
             Cause[15:10] <= hint;
             Count <= Count + 33'd1;
-            if(wen) begin
+            if(exp_en) begin
+                if(exp_badvaddr_en)
+                    BadVAddr <= exp_badvaddr;
+                Status[1] <= ~exl_clean;
+                Cause[31] <= exp_bd;
+                Cause[6:2] <= exp_code;
+                EPC <= exp_epc;
+                Index[31] <= exp_probe_failure;
+            end
+            else if(wen) begin
                 unique case(waddr)
                     { 5'd9, 3'd0 }:
                         Count <= {wdata, 1'b0};
@@ -129,14 +142,15 @@ module cp0(
                     end
                 endcase
             end
-            if(exp_en) begin
-                if(exp_badvaddr_en)
-                    BadVAddr <= exp_badvaddr;
-                Status[1] <= ~exl_clean;
-                Cause[31] <= exp_bd;
-                Cause[6:2] <= exp_code;
-                EPC <= exp_epc;
-                Index[31] <= exp_probe_failure;
+            else if(tlbr) begin
+                EntryHi[31:13] <= cp0_tlb_conf_in[85:67];
+                EntryHi[7:0]   <= cp0_tlb_conf_in[65:58];
+                EntryLo0       <= {cp0_tlb_conf_in[57:29],cp0_tlb_conf_in[66]};
+                EntryLo1       <= {cp0_tlb_conf_in[28:0],cp0_tlb_conf_in[66]};
+            end
+            else if(tlbp) begin
+                Index[3:0]     <= matched_index_probe;
+                Index[31]      <= miss_probe;
             end
         end
     end
