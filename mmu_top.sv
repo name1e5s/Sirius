@@ -6,6 +6,7 @@ module mmu_top(
         // Inst channel
         input                   inst_en,
         input [31:0]            inst_addr,
+        input                   inst_uncached,
         output logic            inst_ok,
         output logic            inst_ok_1,
         output logic            inst_ok_2,
@@ -15,6 +16,7 @@ module mmu_top(
         input                   data_en,
         input [3:0]             data_wen,
         input [31:0]            data_addr,
+        input                   data_uncached,
         input [31:0]            data_wdata,
         output logic            data_ok,
         output logic [31:0]     data_data,
@@ -86,10 +88,10 @@ module mmu_top(
     logic           iaddr_type, daddr_type;
 
     always_comb begin
-        iaddr_psy   = {3'd0, inst_addr[28:0]};
-        iaddr_type  = inst_addr[29];
-        daddr_psy   = {3'd0, data_addr[28:0]};
-        daddr_type  = data_addr[29];
+        iaddr_psy   = inst_addr;
+        iaddr_type  = inst_uncached;
+        daddr_psy   = data_addr;
+        daddr_type  = data_uncached;
     end
 
     // Inst channel

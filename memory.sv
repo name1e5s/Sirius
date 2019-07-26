@@ -5,6 +5,7 @@ module memory(
         input                       rst,
 
         input [31:0] 	            address,
+        input [31:0]                ex_result,
         input [31:0] 	            rt_value,
         input [ 1:0] 	            mem_type,
         input [ 2:0] 	            mem_size,
@@ -42,7 +43,7 @@ module memory(
 
     // Read or write
     always_comb begin : memory_control
-        result = address;
+        result = ex_result;
         mem_wen = 4'b0;
         mem_wdata = rt_value;
         if(address_error) begin

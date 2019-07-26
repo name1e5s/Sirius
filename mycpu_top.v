@@ -57,6 +57,7 @@ module mycpu_top(
    wire         ien, iok, iok1, iok2, den, dok;
    wire [ 3:0]	dwen;
    wire [31:0]  iaddr_i, idata_i, idata2_i, daddr_i, drdata_i, dwdata_i;
+   wire inst_uncached, data_uncached;
    mmu_top mmu_0(
 			.clk                (aclk),
 			.rst                (~aresetn),
@@ -74,6 +75,10 @@ module mycpu_top(
             .data_wdata         (dwdata_i),
             .data_data          (drdata_i),
             .data_ok            (dok),
+
+			.inst_uncached		(inst_uncached),
+			.data_uncached		(data_uncached),
+
 			.arid               (arid),
 			.araddr             (araddr),
 			.arlen              (arlen),
@@ -129,7 +134,10 @@ module mycpu_top(
               .data_addr          (daddr_i),
               .data_wdata         (dwdata_i),
               .data_data          (drdata_i),
-              .data_ok            (dok)
+              .data_ok            (dok),
+
+			  .inst_uncached		(inst_uncached),
+			  .data_uncached		(data_uncached)
 	      );
    
 endmodule

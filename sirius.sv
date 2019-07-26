@@ -11,6 +11,7 @@ module sirius(
         // Inst channel
         output logic            inst_en,
         output logic [31:0]     inst_addr,
+        output logic            inst_uncached,
         input                   inst_ok,
         input                   inst_ok_1,
         input                   inst_ok_2,
@@ -21,6 +22,7 @@ module sirius(
         output logic            data_en,
         output logic [3:0]      data_wen,
         output logic [31:0]     data_addr,
+        output logic            data_uncached,
         output logic [31:0]     data_wdata,
         input                   data_ok,
         input [31:0]            data_data
@@ -35,6 +37,9 @@ module sirius(
     // IF SIGNALS
     wire [31:0]         if_pc_address;
     wire [31:0]         if_pc_slave_address = if_pc_address + 32'd4;
+    wire                if_inst_miss;
+    wire                if_inst_illegal;
+    wire                if_inst_tlb_invalid;
 
     // ID SIGNALS
     // ID -- master
@@ -94,9 +99,19 @@ module sirius(
     wire                ex_exp_eret;
     wire                ex_exp_syscal;
     wire                ex_exp_break;
+    wire                ex_tlb_tlbwi,
+    wire                ex_tlb_tlbwr,
+    wire                ex_tlb_tlbr,
+    wire                ex_tlb_tlbp,
     wire [31:0]         ex_result;
     wire                ex_stall_o;
     wire                ex_reg_en;
+    wire [31:0]         ex_daddr_psy;
+    wire                ex_data_uncached;
+    wire                ex_data_miss;
+    wire                ex_data_illegal;
+    wire                ex_data_tlb_invalid;
+    wire                ex_data_dirty;
 
     wire                ex_exp_overflow_slave;
     wire [31:0]         ex_result_slave;
@@ -115,6 +130,15 @@ module sirius(
     wire [31:0]         mem_cp0_epc_address;
     wire                mem_cp0_allow_interrupt;
     wire [7:0]          mem_cp0_interrupt_flag;
+    wire                mem_cp0_user_mode;
+    wire                mem_cp0_kseg0_uncached;
+    wire [7:0]          mem_cp0_curr_ASID;
+    wire [3:0]          mem_cp0_index;
+    wire [3:0]          mem_cp0_random;
+    wire [85:0]         mem_cp0_tlb_conf_in;
+    wire [85:0]         mem_cp0_tlb_conf_out;
+    wire                mem_tlb_miss_probe;
+    wire                mem_tlb_matched_index_probe;
     wire [31:0]         mem_result;
     wire                mem_addr_error;
 
@@ -136,6 +160,8 @@ module sirius(
     wire                 if_id_in_delay_slot_slave;
     wire                 if_id_fifo_empty;
     wire                 if_id_fifo_almost_empty;
+    wire [2:0]           if_id_inst_exp;
+    wire [2:0]           if_id_inst_exp_slave;
 
     // ID-EX SIGNALS
     // MASTER
@@ -163,6 +189,7 @@ module sirius(
     reg             id_ex_alu_imm_src;
     reg [15:0]      id_ex_immediate;
     reg [4:0]       id_ex_shamt;
+    reg [2:0]       id_ex_inst_exp;
 
     // SLAVE
     reg [31:0]      id_ex_pc_address_slave;
@@ -193,6 +220,10 @@ module sirius(
     reg 	        ex_mem_break_;
     reg 	        ex_mem_eret;
     reg 	        ex_mem_overflow;
+    reg             ex_mem_tlbwi,
+    reg             ex_mem_tlbwr,
+    reg             ex_mem_tlbr,
+    reg             ex_mem_tlbp,
     reg 	        ex_mem_wen;
     reg 	        ex_mem_in_delay_slot;
     reg [31:0]      ex_mem_pc_address;
@@ -203,6 +234,13 @@ module sirius(
     reg             ex_mem_is_branch;
     reg [1:0]       ex_mem_type;
     reg [2:0]       ex_mem_size;
+    reg [2:0]       ex_mem_inst_exp;
+    reg [31:0]      ex_mem_daddr_psy;
+    reg             ex_mem_data_uncached;
+    reg             ex_mem_data_miss;
+    reg             ex_mem_data_illegal;
+    reg             ex_mem_data_tlb_invalid;
+    reg             ex_mem_data_dirty;
 
     // SLAVE
     reg [31:0]      ex_mem_pc_address_slave;
@@ -224,7 +262,6 @@ module sirius(
     reg             mem_wb_reg_en_slave;
     
     assign              inst_en = ~fifo_full;
-    assign              inst_addr = if_pc_address;
 
     logic [63:0] clk_counter;
     always_ff @(posedge clk) begin
@@ -523,6 +560,7 @@ module sirius(
             id_ex_alu_imm_src       <= 1'd0;
             id_ex_immediate         <= 16'd0;
             id_ex_shamt             <= 5'd0;
+            id_ex_inst_exp          <= 3'd0;
         end
         else if(id_ex_en) begin 
             id_ex_pc_address        <= if_id_pc_address;
@@ -548,6 +586,7 @@ module sirius(
             id_ex_alu_imm_src       <= id_alu_imm_src;
             id_ex_immediate         <= id_immediate;
             id_ex_shamt             <= id_shamt;
+            id_ex_inst_exp          <= if_id_inst_exp;
         end
     end
 
@@ -721,6 +760,17 @@ module sirius(
             ex_mem_is_branch            <= 1'd0;
             ex_mem_hilo_wen             <= 1'd0;
             ex_mem_hilo_result          <= 64'd0;
+            ex_mem_tlbwi                <= 1'd0;
+            ex_mem_tlbwr                <= 1'd0;
+            ex_mem_tlbr                 <= 1'd0;
+            ex_mem_tlbp                 <= 1'd0;
+            ex_mem_inst_exp             <= 3'd0;
+            ex_mem_daddr_psy            <= 32'd0;
+            ex_mem_data_uncached        <= 1'd0;
+            ex_mem_data_miss            <= 1'd0;
+            ex_mem_data_illegal         <= 1'd0;
+            ex_mem_data_tlb_invalid     <= 1'd0;
+            ex_mem_data_dirty           <= 1'd0;
         end
         else if(ex_mem_en) begin 
             ex_mem_cp0_wen              <= ex_cop0_wen;
@@ -747,6 +797,17 @@ module sirius(
             ex_mem_is_branch            <= id_ex_is_branch;
             ex_mem_hilo_wen             <= ex_hilo_wen;
             ex_mem_hilo_result          <= ex_hilo_result;
+            ex_mem_tlbwi                <= ex_tlb_tlbwi;
+            ex_mem_tlbwr                <= ex_tlb_tlbwr;
+            ex_mem_tlbr                 <= ex_tlb_tlbr;
+            ex_mem_tlbp                 <= ex_tlb_tlbp;
+            ex_mem_inst_exp             <= id_ex_inst_exp;
+            ex_mem_daddr_psy            <= ex_daddr_psy;
+            ex_mem_data_uncached        <= ex_data_uncached;
+            ex_mem_data_miss            <= ex_data_miss;
+            ex_mem_data_illegal         <= ex_data_illegal;
+            ex_mem_data_tlb_invalid     <= ex_data_tlb_invalid;
+            ex_mem_data_dirty           <= ex_data_dirty;
         end
     end
 
@@ -769,11 +830,43 @@ module sirius(
         end
     end 
 
+    mmu_map_top mmu_map(
+        .clk                        (clk),
+        .rst                        (rst),
+        .tlbwi                      (ex_mem_tlbwi),
+        .tlbwr                      (ex_mem_tlbwr),
+        .tlbp                       (ex_mem_tlbp),
+        .iaddr                      (if_pc_address),
+        .inst_en                    (~fifo_full),
+        .iaddr_psy                  (inst_addr),
+        .inst_uncached              (inst_uncached),
+        .inst_miss                  (if_inst_miss),
+        .inst_illegal               (if_inst_illegal),
+        .inst_tlb_invalid           (if_inst_tlb_invalid),
+        .daddr                      (ex_result),
+        .data_en                    (id_ex_mem_type != `MEM_NOOP),
+        .daddr_psy                  (ex_daddr_psy),
+        .data_uncached              (ex_data_uncached),
+        .data_miss                  (ex_data_miss),
+        .data_illegal               (ex_data_illegal),
+        .data_tlb_invalid           (ex_data_tlb_invalid),
+        .data_dirty                 (ex_data_dirty),
+        .miss_probe                 (mem_tlb_miss_probe),
+        .matched_index_probe        (mem_tlb_matched_index_probe),
+        .user_mode                  (mem_cp0_user_mode),
+        .cp0_kseg0_uncached         (mem_cp0_kseg0_uncached),
+        .curr_ASID                  (mem_cp0_curr_ASID),
+        .cp0_index                  (mem_cp0_index),
+        .cp0_random                 (mem_cp0_random),
+        .cp0_tlb_conf_in            (mem_cp0_tlb_conf_out), // In CP0's perspective
+        .cp0_tlb_conf_out           (mem_cp0_tlb_conf_in)
+    );
 
     memory memory_0(
         .clk                        (clk),
         .rst                        (rst),
-        .address                    (ex_mem_mem_address),
+        .address                    (ex_mem_daddr_psy),
+        .ex_result                  (ex_mem_result),
         .rt_value                   (ex_mem_rt_value),
         .mem_type                   (ex_mem_type),
         .mem_size                   (ex_mem_size),

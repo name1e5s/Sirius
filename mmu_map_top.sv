@@ -27,8 +27,8 @@ module mmu_map_top(
     output logic [3:0]          matched_index_probe,
 
     // From/to CP0
-    output logic                user_mode,
-    output logic                cp0_kseg0_uncached,
+    input                       user_mode,
+    input                       cp0_kseg0_uncached,
     input [7:0]                 curr_ASID,
     input [3:0]                 cp0_index,
     input [3:0]                 cp0_random,
