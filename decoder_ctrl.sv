@@ -179,6 +179,20 @@ module decoder_ctrl(
                 else if(instruction[25:21] == 5'b00100) // MTC0
                     {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
                         {`ALU_MTC0, `SRC_REG, `SIGN_EXTENDED, `MEM_NOOP, `SZ_FULL, rt, 1'b0, `ZERO_EXTENDED};
+                else if(instruction[25] && instruction[5:0] == 6'b001000) // TLBP
+                    {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
+                        {`ALU_TLBP, `SRC_REG, `SIGN_EXTENDED, `MEM_NOOP, `SZ_FULL, rt, 1'b0, `ZERO_EXTENDED};
+                else if(instruction[25] && instruction[5:0] == 6'b000001) // TLBR
+                    {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
+                        {`ALU_TLBR, `SRC_REG, `SIGN_EXTENDED, `MEM_NOOP, `SZ_FULL, rt, 1'b0, `ZERO_EXTENDED};
+                else if(instruction[25] && instruction[5:0] == 6'b000010) // TLBWI
+                    {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
+                        {`ALU_TLBWI, `SRC_REG, `SIGN_EXTENDED, `MEM_NOOP, `SZ_FULL, rt, 1'b0, `ZERO_EXTENDED};
+                else if(instruction[25] && instruction[5:0] == 6'b000110) // TLBWR
+                    {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
+                        {`ALU_TLBWR, `SRC_REG, `SIGN_EXTENDED, `MEM_NOOP, `SZ_FULL, rt, 1'b0, `ZERO_EXTENDED};
+                else
+                    undefined_inst = 1'd1;
             end
             // MIPS32r1 begin
             {6'b011100, 6'b100001}: // CLO

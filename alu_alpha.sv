@@ -24,6 +24,10 @@ module alu_alpha(
         output logic                exp_eret,
         output logic                exp_syscal,
         output logic                exp_break,
+        output logic                tlb_tlbwi,
+        output logic                tlb_tlbwr,
+        output logic                tlb_tlbr,
+        output logic                tlb_tlbp,
 
         output logic                ex_reg_en,
         output logic                hilo_wen,
@@ -46,6 +50,10 @@ module alu_alpha(
     assign exp_eret = alu_op == `ALU_ERET;
     assign exp_syscal = alu_op == `ALU_SYSC;
     assign exp_break = alu_op == `ALU_BREK;
+    assign tlb_tlbp = alu_op == `ALU_TLBP;
+    assign tlb_tlbwi = alu_op == `ALU_TLBWI;
+    assign tlb_tlbwr = alu_op == `ALU_TLBWR;
+    assign tlb_tlbr = alu_op == `ALU_TLBR;
 
     always_comb begin : write_c0
         if(alu_op == `ALU_MTC0)

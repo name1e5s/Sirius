@@ -40,3 +40,7 @@
 `define ALU_MSUBU   6'd35
 `define ALU_MOVN    6'd36
 `define ALU_MOVZ    6'd37
+`define ALU_TLBWI   6'd38
+`define ALU_TLBWR   6'd39
+`define ALU_TLBR    6'd40
+`define ALU_TLBP    6'd41
