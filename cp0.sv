@@ -22,7 +22,15 @@ module cp0(
         input                       exl_clean,
 
         // TLB...
-        input                       exp_probe_failure,
+        input                       miss_probe,
+        input [3:0]                 matched_index_probe,
+        output logic                user_mode,
+        output logic                cp0_kseg0_uncached,
+        output logic [7:0]          curr_ASID,
+        output logic [3:0]          cp0_index,
+        output logic [3:0]          cp0_random,
+        output logic [85:0]         cp0_tlb_conf_out,
+        input [85:0]                cp0_tlb_conf_in         
 
         output logic [31:0]         epc_address,
         output logic                allow_interrupt,
@@ -43,6 +51,12 @@ module cp0(
     assign epc_address       = EPC;
     assign allow_interrupt   = Status[2:0] == 3'b001;
     assign interrupt_flag    = Status[15:8] & Cause[15:8];
+    assign curr_ASID         = EntryHi[7:0];
+    assign cp0_index         = Index[3:0];
+    assign cp0_random        = 4'd4; // Chosen by fair dice roll
+                                     // guaranteed to be random
+    assign user_mode = Status[4:1]==4'b1000;
+    assign cp0_tlb_conf_out = { EntryHi[31:13], EntryLo0[0] && EntryLo0[1], EntryHi[7:0], EntryLo0[29:1], EntryLo1[29:1]};
 
     always_comb begin : cop0_data_read
         unique case(raddr)
