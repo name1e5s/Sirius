@@ -73,7 +73,7 @@ module memory(
                         mem_wen = 4'b0000;
                     endcase
                 end
-                SZ_LEFT: begin
+                `SZ_LEFT: begin
                     unique case(address[1:0])
                     2'd0: begin
                         mem_wen = 4'b0001;
@@ -95,7 +95,7 @@ module memory(
                         mem_wen = 4'b0000;
                     endcase
                 end
-                SZ_RIGH: begin
+                `SZ_RIGH: begin
                     unique case(address[1:0])
                     2'd0: begin
                         mem_wen = 4'b1111;

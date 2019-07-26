@@ -15,6 +15,7 @@ module instruction_fifo(
         input                       write_en1,
         input                       write_en2,
         input [31:0]                write_data1,
+        input [ 2:0]                write_inst_exp1,
         input [31:0]                write_address1,
         input [31:0]                write_data2,
         input [31:0]                write_address2,
@@ -24,6 +25,8 @@ module instruction_fifo(
         output logic [31:0]         data_out2,
         output logic [31:0]         address_out1,
         output logic [31:0]         address_out2,
+        output logic [2:0]          inst_exp1,
+        output logic [2:0]          inst_exp2,
         output logic                delay_slot_out1,
         output logic                empty,
         output logic                almost_empty,
@@ -33,11 +36,13 @@ module instruction_fifo(
     // Reset status
     reg         in_delay_slot;
     reg         in_delay_slot_without_rst;
+    reg [2:0]   delayed_inst_exp;
     reg [31:0]  delayed_data;
     reg [31:0]  delayed_pc;
     // Store data here
     reg [31:0]  data[0:15];
     reg [31:0]  address[0:15];
+    reg [2:0]   inst_exp[0:15];
 
     // Internal variables
     reg [3:0] write_pointer;
@@ -54,6 +59,8 @@ module instruction_fifo(
     wire [31:0] _data_out2 = data[read_pointer + 4'd1];
     wire [31:0] _address_out1 = address[read_pointer];
     wire [31:0] _address_out2 = address[read_pointer + 4'd1];
+    wire [2:0]  _inst_exp1 = inst_exp[read_pointer];
+    wire [2:0]  _inst_exp2 = inst_exp[read_pointer + 4'd1];
 
     // Delay slot data FSM
     reg delay_slot_refill;
@@ -85,6 +92,8 @@ module instruction_fifo(
             data_out2       = 32'd0;
             address_out1    = delayed_pc;
             address_out2    = 32'd0;
+            inst_exp1       = delayed_inst_exp;
+            inst_exp2       = 3'd0;
             delay_slot_out1 = 1'd1;
         end
         else if(empty) begin
@@ -92,6 +101,8 @@ module instruction_fifo(
             data_out2       = 32'd0;
             address_out1    = 32'd0;
             address_out2    = 32'd0;
+            inst_exp1       = 3'd0;
+            inst_exp2       = 3'd0;
             delay_slot_out1 = 1'd0;
         end
         else if(almost_empty) begin
@@ -99,6 +110,8 @@ module instruction_fifo(
             data_out2       = 32'd0;
             address_out1    = _address_out1;
             address_out2    = 32'd0;
+            inst_exp1       = _inst_exp1;
+            inst_exp2       = 3'd0;
             delay_slot_out1 = in_delay_slot_without_rst;
         end 
         else begin
@@ -106,6 +119,8 @@ module instruction_fifo(
             data_out2       = _data_out2;
             address_out1    = _address_out1;
             address_out2    = _address_out2;
+            inst_exp1       = _inst_exp1;
+            inst_exp2       = _inst_exp2;
             delay_slot_out1 = in_delay_slot_without_rst;
         end
     end
@@ -125,9 +140,11 @@ module instruction_fifo(
             in_delay_slot   <= 1'd1;
             delayed_data    <= (read_pointer + 4'd1 == write_pointer || read_pointer == write_pointer)? write_data1 : data[read_pointer + 4'd1];
             delayed_pc      <= (read_pointer + 4'd1 == write_pointer || read_pointer == write_pointer)? write_address1 : address[read_pointer + 4'd1];
+            delayed_inst_exp<= (read_pointer + 4'd1 == write_pointer || read_pointer == write_pointer)? write_inst_exp1 : inst_exp[read_pointer + 4'd1];
         end
         else if(delay_slot_refill && write_en1) begin
             delayed_data    <= write_data1;
+            delayed_inst_exp<= write_inst_exp1;
         end
         else if(!delay_slot_refill && read_en1) begin
             in_delay_slot   <= 1'd0;
@@ -195,10 +212,12 @@ module instruction_fifo(
         if(write_en1) begin
             data[write_pointer] <= write_data1;
             address[write_pointer] <= write_address1;
+            inst_exp[write_pointer] <= write_inst_exp1;
         end
         if(write_en2) begin
             data[write_pointer + 4'd1] <= write_data2;
             address[write_pointer + 4'd1] <= write_address2;
+            inst_exp[write_pointer + 4'd1] <= write_inst_exp1; // EXP (I)
         end
     end
 

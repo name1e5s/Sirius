@@ -220,10 +220,10 @@ module sirius(
     reg 	        ex_mem_break_;
     reg 	        ex_mem_eret;
     reg 	        ex_mem_overflow;
-    reg             ex_mem_tlbwi,
-    reg             ex_mem_tlbwr,
-    reg             ex_mem_tlbr,
-    reg             ex_mem_tlbp,
+    reg             ex_mem_tlbwi;
+    reg             ex_mem_tlbwr;
+    reg             ex_mem_tlbr;
+    reg             ex_mem_tlbp;
     reg 	        ex_mem_wen;
     reg 	        ex_mem_in_delay_slot;
     reg [31:0]      ex_mem_pc_address;
@@ -343,10 +343,13 @@ module sirius(
         .write_address1         (if_pc_address),
         .write_data2            (inst_data_2),
         .write_address2         (if_pc_address + 32'd4),
+        .write_inst_exp1        ({if_inst_miss,if_inst_illegal,if_inst_tlb_invalid}),
         .data_out1              (if_id_instruction),
         .data_out2              (if_id_instruction_slave),
         .address_out1           (if_id_pc_address),
         .address_out2           (if_id_pc_address_slave),
+        .inst_exp1              (if_id_inst_exp),
+        .inst_exp2              (if_id_inst_exp_slave),
         .delay_slot_out1        (if_id_in_delay_slot),
         .empty                  (if_id_fifo_empty),
         .almost_empty           (if_id_fifo_almost_empty),
