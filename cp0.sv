@@ -20,6 +20,9 @@ module cp0(
         input [4:0]                 exp_code,
         input [31:0]                exp_epc,
         input                       exl_clean,
+        input                       exp_asid_en,
+        input [7:0]                 exp_asid,
+
 
         // TLB instructions
         input                       tlbr,
@@ -41,16 +44,22 @@ module cp0(
         output logic [7:0]          interrupt_flag
 );
    
-    // Control register definition
-    reg [31:0] 		        BadVAddr;
-    reg [32:0] 		        Count;
-    reg [31:0] 		        Status;
-    reg [31:0] 		        Cause;
-    reg [31:0] 		        EPC;
-    reg [31:0]              EntryHi;
-    reg [31:0]              EntryLo0;
-    reg [31:0]              EntryLo1;
-    reg [31:0]              Index;
+    // Control register definition\
+    reg [31:0]              Index;          // 0 0
+    reg [31:0]              EntryLo0;       // 2 0
+    reg [31:0]              EntryLo1;       // 3 0
+    reg [31:0]              Context;        // 4 0 -- NEW
+    reg [31:0] 		        BadVAddr;       // 8 0
+    reg [32:0] 		        Count;          // 9 0
+    reg [31:0]              EntryHi;        // 10 0
+    reg [31:0]              Compare;        // 11 0
+    reg [31:0] 		        Status;         // 12 0
+    reg [31:0] 		        Cause;          // 13 0
+    reg [31:0] 		        EPC;            // 14 0
+    reg [31:0]              PRId;           // 15 0 -- NEW
+    reg [31:0]              EBase;          // 15 1 -- NEW
+    reg [31:0]              Config;         // 16 0 -- NEW
+    reg [31:0]              Config1;        // 16 1 -- NEW
 
     assign epc_address       = EPC;
     assign allow_interrupt   = Status[2:0] == 3'b001;
@@ -60,7 +69,7 @@ module cp0(
     assign cp0_random        = 4'd4; // Chosen by fair dice roll
                                      // guaranteed to be random
     assign user_mode = 1'd0;
-    assign cp0_kseg0_uncached = 1'd0;
+    assign cp0_kseg0_uncached = Config[2:0] == 3'd2;
     assign cp0_tlb_conf_out = { EntryHi[31:13], EntryLo0[0] && EntryLo0[1], EntryHi[7:0], EntryLo0[29:1], EntryLo1[29:1]};
 
     always_comb begin : cop0_data_read
@@ -82,8 +91,20 @@ module cp0(
                 rdata = EntryLo0;
             { 5'd3, 3'd0 }:
                 rdata = EntryLo1;
-            { 5'd0, 5'd0 }:
+            { 5'd0, 3'd0 }:
                 rdata = Index;
+            { 5'd4, 3'd0 }:
+                rdata = Context;
+            { 5'd11, 3'd0 }:
+                rdata = Compare;
+            { 5'd15, 3'd0 }:
+                rdata = PRId;
+            { 5'd15, 3'd1 }:
+                rdata = EBase;
+            { 5'd16, 3'd0 }:
+                rdata = Config;
+            { 5'd16, 3'd1 }:
+                rdata = Config1;
             // SiriusG end
             default:
                 rdata = 32'd0;
@@ -92,17 +113,20 @@ module cp0(
 
     always_ff @(posedge clk) begin : cop0_data_update
         if(rst) begin
-            Count <= 32'd0;
-            Status[31:23] <= 9'd0;
-            Status[22] <= 1'b1;
-            Status[21:16] <= 6'd0;
-            Status[7:2] <= 6'd0;
-            Status[1:0] <= 2'b0;
-            Cause <= 32'd0;
-            EntryHi <= 32'd0;
+            Count           <= 32'd0;
+            Status          <= 32'h1040_0004;
+            Cause           <= 32'd0;
+            EntryHi         <= 32'd0;
             EntryLo0[31:30] <= 2'd0;
             EntryLo1[31:30] <= 2'd0;
-            Index <= 32'd0;
+            Index           <= 32'd0;
+            Context         <= 32'd0;
+            EBase           <= 32'h8000_0000;
+            Compare         <= 32'd0;
+            Context         <= 32'd0;
+            PRId            <= 32'h0001_8000; // MIPS 4KC
+            Config          <= {1'b1, 21'b0, 3'b1, 7'b0}; // MIPS32R1
+            Config1         <= {1'd0, 6'd15, 3'd1, 3'd5, 3'd0, 3'd1, 3'd5, 3'd0, 7'd0};
         end
         else begin
             Cause[15:10] <= hint;
@@ -110,13 +134,18 @@ module cp0(
             if(wen) begin
                 unique case(waddr)
                     { 5'd9, 3'd0 }:
-                        Count <= {wdata, 1'b0};
+                        Count           <= {wdata, 1'b0};
                     { 5'd12, 3'd0}: begin
-                        Status[15:8] <= wdata[15:8];
-                        Status[1:0] <= wdata[1:0];
+                        Status[28]      <= wdata[28];
+                        Status[22]      <= wdata[22];
+                        Status[15:8]    <= wdata[15:8];
+                        Status[4]       <= wdata[4];
+                        Status[2:0]     <= wdata[2:0];
                     end
-                    { 5'd13 , 3'd0 }:
-                        Cause[9:8] <= wdata[9:8];
+                    { 5'd13 , 3'd0 }: begin
+                        Cause[9:8]      <= wdata[9:8];
+                        Cause[23]       <= wdata[23];
+                    end
                     { 5'd14 , 3'd0 }:
                         EPC <= wdata;
                     { 5'd10, 3'd0}: begin
@@ -124,11 +153,20 @@ module cp0(
                         EntryHi[7:0]    <= wdata[7:0];
                     end
                     { 5'd2 , 3'd0 }:
-                        EntryLo0[29:0] <= wdata[29:0];
+                        EntryLo0[29:0]  <= wdata[29:0];
                     { 5'd3 , 3'd0 }:
-                        EntryLo1[29:0] <= wdata[29:0];
+                        EntryLo1[29:0]  <= wdata[29:0];
                     { 5'd0, 5'd0 }:
-                        Index[3:0] <= wdata[3:0]; // Only 16 entries here...
+                        Index[3:0]      <= wdata[3:0]; // Only 16 entries here...
+                    { 5'd4, 3'd0 }:
+                        Context[31:13]  <= wdata[31:13];
+                    { 5'd11, 3'd0 }:
+                        Compare         <= wdata;
+                    { 5'd15, 3'd1 }:
+                        EBase[29:12]    <= wdata[29:12];
+                    { 5'd16, 3'd1 }: begin
+                        Config[2:0]     <= wdata[2:0];
+                    end
                     default: begin
                         // Make vivado happy. :)
                     end
@@ -136,11 +174,15 @@ module cp0(
             end
             if(exp_en) begin
                 if(exp_badvaddr_en)
-                    BadVAddr <= exp_badvaddr;
-                Status[1] <= ~exl_clean;
-                Cause[31] <= exp_bd;
-                Cause[6:2] <= exp_code;
-                EPC <= exp_epc;
+                    BadVAddr            <= exp_badvaddr;
+                if(exp_asid_en)
+                    EntryHi[7:0]        <= exp_asid;
+                Context[22:4]           <= exp_badvaddr[31:13];
+                EntryHi[31:13]          <= exp_badvaddr[31:13];
+                Status[1]               <= ~exl_clean;
+                Cause[31]               <= exp_bd;
+                Cause[6:2]              <= exp_code;
+                EPC                     <= exp_epc;
             end
             if(tlbr) begin
                 EntryHi[31:13] <= cp0_tlb_conf_in[85:67];
