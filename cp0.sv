@@ -4,7 +4,7 @@ module cp0(
         input                       clk,
         input                       rst,
 
-        input [5:0]                 hint,
+        input [4:0]                 hint,
         input [7:0]                 raddr,
         output logic [31:0]         rdata,
 
@@ -37,7 +37,13 @@ module cp0(
         output logic [3:0]          cp0_index,
         output logic [3:0]          cp0_random,
         output logic [85:0]         cp0_tlb_conf_out,
-        input [85:0]                cp0_tlb_conf_in,     
+        input [85:0]                cp0_tlb_conf_in,
+
+        // MIPS32r1
+        output logic [31:0]         ebase_address, 
+        output logic                use_special_iv,
+        output logic                use_bootstrap_iv,
+        output logic                exl_set,
 
         output logic [31:0]         epc_address,
         output logic                allow_interrupt,
@@ -68,9 +74,15 @@ module cp0(
     assign cp0_index         = Index[3:0];
     assign cp0_random        = 4'd4; // Chosen by fair dice roll
                                      // guaranteed to be random
-    assign user_mode = 1'd0;
+    assign user_mode = Status[4:1]==4'b1000;
     assign cp0_kseg0_uncached = Config[2:0] == 3'd2;
     assign cp0_tlb_conf_out = { EntryHi[31:13], EntryLo0[0] && EntryLo0[1], EntryHi[7:0], EntryLo0[29:1], EntryLo1[29:1]};
+    assign ebase_address = EBase;
+    assign use_special_iv = Cause[23];
+    assign use_bootstrap_iv = Status[22];
+    assign exl_set = Status[1];
+
+    logic timer_int;
 
     always_comb begin : cop0_data_read
         unique case(raddr)
@@ -127,10 +139,13 @@ module cp0(
             PRId            <= 32'h0001_8000; // MIPS 4KC
             Config          <= {1'b1, 21'b0, 3'b1, 7'b0}; // MIPS32R1
             Config1         <= {1'd0, 6'd15, 3'd1, 3'd5, 3'd0, 3'd1, 3'd5, 3'd0, 7'd0};
+            timer_int       <= 1'd0;
         end
         else begin
-            Cause[15:10] <= hint;
+            Cause[14:10] <= {timer_int,hint};
             Count <= Count + 33'd1;
+            if(Compare != 32'd0 && Compare == Count[32:1])
+                timer_int <= 1'd1;
             if(wen) begin
                 unique case(waddr)
                     { 5'd9, 3'd0 }:
@@ -160,8 +175,10 @@ module cp0(
                         Index[3:0]      <= wdata[3:0]; // Only 16 entries here...
                     { 5'd4, 3'd0 }:
                         Context[31:13]  <= wdata[31:13];
-                    { 5'd11, 3'd0 }:
+                    { 5'd11, 3'd0 }: begin
                         Compare         <= wdata;
+                        timer_int       <= 1'd0;
+                    end
                     { 5'd15, 3'd1 }:
                         EBase[29:12]    <= wdata[29:12];
                     { 5'd16, 3'd1 }: begin

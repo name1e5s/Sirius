@@ -7,7 +7,7 @@ module sirius(
         input                   rst,
         
         // Interupt channel
-        input [5:0]             interrupt,
+        input [4:0]             interrupt,
         // Inst channel
         output logic            inst_en,
         output logic [31:0]     inst_addr,
