@@ -11,6 +11,13 @@ module memory(
         input [ 2:0] 	            mem_size,
         input 		                mem_signed,
 
+        // Exceptions...
+        input [ 2:0]                inst_exp,
+        input                       data_miss,
+        input                       data_illegal,
+        input                       data_tlb_invalid,
+        input                       data_dirty,
+
         // Connect to sram.
         output logic 	            mem_en,
         output logic [3:0]          mem_wen,
@@ -20,11 +27,15 @@ module memory(
 
         output logic [31:0]         result,
         // Report error
-        output logic                address_error
+        output logic                address_error,
+        output logic                tlb_modified
 );
 
-    assign mem_en   = |mem_type && (~address_error);
-    assign mem_addr = address;
+    assign mem_en       = |mem_type && (~address_error) && 
+                      (~(|inst_exp)) && (~data_miss) && (~data_tlb_invalid) &&
+                      ~((~data_dirty && |mem_wen));
+    assign mem_addr     = address;
+    assign tlb_modified = (data_dirty && |mem_wen);
 
     always_comb begin : detect_alignment_error
         if(mem_type != `MEM_NOOP) begin

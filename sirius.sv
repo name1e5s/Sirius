@@ -885,7 +885,12 @@ module sirius(
         .mem_wdata                  (data_wdata),
         .mem_rdata                  (data_data),
         .result                     (mem_result),
-        .address_error              (mem_addr_error)
+        .address_error              (mem_addr_error),
+        .data_miss                  (ex_mem_data_miss),
+        .data_illegal               (ex_mem_data_illegal),
+        .data_tlb_invalid           (ex_mem_data_tlb_invalid),
+        .data_dirty                 (ex_mem_data_dirty),
+        .inst_exp                   (ex_mem_inst_exp)
     );
 
     wire exp_detect_salve;
@@ -905,7 +910,7 @@ module sirius(
         .is_branch_instruction      (ex_mem_is_branch),
         .is_branch_slot             (ex_mem_in_delay_slot),
         .pc_address                 (ex_mem_pc_address),
-        .mem_address                (data_addr),
+        .mem_address                (ex_mem_result),
         .epc_address                (mem_cp0_epc_address),
         .allow_interrupt            (mem_cp0_allow_interrupt),
         .interrupt_flag             (mem_cp0_interrupt_flag),
