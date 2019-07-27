@@ -34,7 +34,7 @@ module cp0(
         output logic [3:0]          cp0_index,
         output logic [3:0]          cp0_random,
         output logic [85:0]         cp0_tlb_conf_out,
-        input [85:0]                cp0_tlb_conf_in         
+        input [85:0]                cp0_tlb_conf_in,     
 
         output logic [31:0]         epc_address,
         output logic                allow_interrupt,
@@ -59,7 +59,8 @@ module cp0(
     assign cp0_index         = Index[3:0];
     assign cp0_random        = 4'd4; // Chosen by fair dice roll
                                      // guaranteed to be random
-    assign user_mode = Status[4:1]==4'b1000;
+    assign user_mode = 1'd0;
+    assign cp0_kseg0_uncached = 1'd0;
     assign cp0_tlb_conf_out = { EntryHi[31:13], EntryLo0[0] && EntryLo0[1], EntryHi[7:0], EntryLo0[29:1], EntryLo1[29:1]};
 
     always_comb begin : cop0_data_read
@@ -106,16 +107,7 @@ module cp0(
         else begin
             Cause[15:10] <= hint;
             Count <= Count + 33'd1;
-            if(exp_en) begin
-                if(exp_badvaddr_en)
-                    BadVAddr <= exp_badvaddr;
-                Status[1] <= ~exl_clean;
-                Cause[31] <= exp_bd;
-                Cause[6:2] <= exp_code;
-                EPC <= exp_epc;
-                Index[31] <= exp_probe_failure;
-            end
-            else if(wen) begin
+            if(wen) begin
                 unique case(waddr)
                     { 5'd9, 3'd0 }:
                         Count <= {wdata, 1'b0};
@@ -142,13 +134,21 @@ module cp0(
                     end
                 endcase
             end
-            else if(tlbr) begin
+            if(exp_en) begin
+                if(exp_badvaddr_en)
+                    BadVAddr <= exp_badvaddr;
+                Status[1] <= ~exl_clean;
+                Cause[31] <= exp_bd;
+                Cause[6:2] <= exp_code;
+                EPC <= exp_epc;
+            end
+            if(tlbr) begin
                 EntryHi[31:13] <= cp0_tlb_conf_in[85:67];
                 EntryHi[7:0]   <= cp0_tlb_conf_in[65:58];
                 EntryLo0       <= {cp0_tlb_conf_in[57:29],cp0_tlb_conf_in[66]};
                 EntryLo1       <= {cp0_tlb_conf_in[28:0],cp0_tlb_conf_in[66]};
             end
-            else if(tlbp) begin
+            if(tlbp) begin
                 Index[3:0]     <= matched_index_probe;
                 Index[31]      <= miss_probe;
             end

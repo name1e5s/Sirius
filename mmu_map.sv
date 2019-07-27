@@ -25,7 +25,7 @@ module mmu_map(
                     addr_uncached = cp0_kseg0_uncached;
                     paddr = { 3'b0, vaddr[28:0]};
                 end
-                3'b100: begin // kseg1
+                3'b101: begin // kseg1
                     addr_uncached = 1;
                     paddr = { 3'b0, vaddr[28:0]};
                 end

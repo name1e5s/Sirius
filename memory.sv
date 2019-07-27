@@ -160,7 +160,7 @@ module memory(
                         result = mem_rdata;
                     endcase
                 end
-                `SZ_RIGHT: begin
+                `SZ_RIGH: begin
                     unique case(address[1:0])
                     2'b00:
                         result = mem_rdata;

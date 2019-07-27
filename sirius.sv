@@ -99,10 +99,10 @@ module sirius(
     wire                ex_exp_eret;
     wire                ex_exp_syscal;
     wire                ex_exp_break;
-    wire                ex_tlb_tlbwi,
-    wire                ex_tlb_tlbwr,
-    wire                ex_tlb_tlbr,
-    wire                ex_tlb_tlbp,
+    wire                ex_tlb_tlbwi;
+    wire                ex_tlb_tlbwr;
+    wire                ex_tlb_tlbr;
+    wire                ex_tlb_tlbp;
     wire [31:0]         ex_result;
     wire                ex_stall_o;
     wire                ex_reg_en;
@@ -262,6 +262,7 @@ module sirius(
     reg             mem_wb_reg_en_slave;
     
     assign              inst_en = ~fifo_full;
+    assign              data_uncached = ex_mem_data_uncached;
 
     logic [63:0] clk_counter;
     always_ff @(posedge clk) begin
@@ -723,7 +724,11 @@ module sirius(
         .hilo_result        (ex_hilo_result),
         .result             (ex_result),
         .stall_o            (ex_stall_o),
-        .ex_reg_en          (ex_reg_en)
+        .ex_reg_en          (ex_reg_en),
+        .tlb_tlbwi          (ex_tlb_tlbwi),
+        .tlb_tlbwr          (ex_tlb_tlbwr),
+        .tlb_tlbr           (ex_tlb_tlbr),
+        .tlb_tlbp           (ex_tlb_tlbp)
     );
 
     alu_beta alu_beta(
@@ -937,7 +942,18 @@ module sirius(
         .exl_clean              (mem_cp0_exl_clean),
         .epc_address            (mem_cp0_epc_address),
         .allow_interrupt        (mem_cp0_allow_interrupt),
-        .interrupt_flag         (mem_cp0_interrupt_flag)
+        .interrupt_flag         (mem_cp0_interrupt_flag),
+        .user_mode                  (mem_cp0_user_mode),
+        .cp0_kseg0_uncached         (mem_cp0_kseg0_uncached),
+        .curr_ASID                  (mem_cp0_curr_ASID),
+        .cp0_index                  (mem_cp0_index),
+        .cp0_random                 (mem_cp0_random),
+        .cp0_tlb_conf_in            (mem_cp0_tlb_conf_in), // In CP0's perspective
+        .cp0_tlb_conf_out           (mem_cp0_tlb_conf_out),
+        .miss_probe                 (mem_tlb_miss_probe),
+        .matched_index_probe        (mem_tlb_matched_index_probe),
+        .tlbr                       (ex_mem_tlbr),
+        .tlbp                       (ex_mem_tlbp)
     );
 
     always_ff @(posedge clk) begin
