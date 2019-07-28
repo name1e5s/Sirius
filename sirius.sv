@@ -526,7 +526,8 @@ module sirius(
         .fifo_empty                 (if_id_fifo_empty),
         .fifo_almost_empty          (if_id_fifo_almost_empty),
         .enable_master              (if_id_en),
-        .enable_slave               (id_enable_slave)
+        .enable_slave               (id_enable_slave),
+        .id_tlb_error               (|inst_exp2[2:0])
     );
 
     logic [63:0] id_enable_slave_counter;
@@ -572,7 +573,7 @@ module sirius(
             id_ex_alu_imm_src       <= 1'd0;
             id_ex_immediate         <= 16'd0;
             id_ex_shamt             <= 5'd0;
-            id_ex_inst_exp          <= 3'd0;
+            id_ex_inst_exp          <= 12'd0;
             id_ex_priv_inst         <= 1'd0;
         end
         else if(id_ex_en) begin 
@@ -782,7 +783,7 @@ module sirius(
             ex_mem_tlbwr                <= 1'd0;
             ex_mem_tlbr                 <= 1'd0;
             ex_mem_tlbp                 <= 1'd0;
-            ex_mem_inst_exp             <= 3'd0;
+            ex_mem_inst_exp             <= 12'd0;
             ex_mem_daddr_psy            <= 32'd0;
             ex_mem_data_uncached        <= 1'd0;
             ex_mem_data_miss            <= 1'd0;

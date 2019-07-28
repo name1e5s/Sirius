@@ -21,6 +21,7 @@ module dual_engine(
         input                   id_is_branch_instr_slave,
         input                   id_priv_inst_slave,
         input                   id_is_hilo_accessed_slave,
+        input                   id_tlb_error,
 
         // Info about FIFO
         input                   fifo_empty,
@@ -41,7 +42,8 @@ module dual_engine(
             (id_priv_inst_slave) ||
             (id_is_branch_instr_slave) ||
             (id_mem_type_slave != `MEM_NOOP) ||
-            (id_is_hilo_accessed_slave)
+            (id_is_hilo_accessed_slave) ||
+            (id_tlb_error)
         ) begin
             _enable_slave = 1'b0;
         end
