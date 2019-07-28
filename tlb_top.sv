@@ -73,7 +73,7 @@ module tlb_top(
         .tlbwi              (tlbwi),
         .tlbwr              (tlbwr),
         .curr_ASID          (curr_ASID),
-        .vaddr              ({cp0_tlb_conf_in[85:67],12'd0}),
+        .vaddr              ({cp0_tlb_conf_in[85:67],13'd0}),
         .miss               (miss_probe),
         .matched_index      (matched_index_probe),
         .cp0_index          (cp0_index),

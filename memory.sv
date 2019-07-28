@@ -44,7 +44,7 @@ module memory(
     assign tlb_modified = (data_dirty && |mem_wen);
 
     assign inst_hit_invalidate = mem_type == `MEM_CACH && (rt_addr == 5'b00000 || rt_addr == 5'b10000);
-    assign data_hit_invalidate = mem_type == `MEM_CACH && (rt_addr == 5'b00001 || rt_addr == 5'b10101);
+    assign data_hit_writeback = mem_type == `MEM_CACH && (rt_addr == 5'b00001 || rt_addr == 5'b10101);
     assign index_invalidate    = mem_type == `MEM_CACH && (rt_addr == 5'b00000 || rt_addr == 5'b00001);
 
     always_comb begin : detect_alignment_error

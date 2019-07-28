@@ -143,7 +143,7 @@ module sirius(
     wire [85:0]         mem_cp0_tlb_conf_in;
     wire [85:0]         mem_cp0_tlb_conf_out;
     wire                mem_tlb_miss_probe;
-    wire                mem_tlb_matched_index_probe;
+    wire [3:0]          mem_tlb_matched_index_probe;
     wire [31:0]         mem_result;
     wire                mem_addr_error;
     wire                mem_inst_hit_invalidate;

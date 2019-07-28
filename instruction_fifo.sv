@@ -150,6 +150,7 @@ module instruction_fifo(
             in_delay_slot   <= 1'd0;
             delayed_data    <= 32'd0;
             delayed_pc      <= 32'd0;
+            delayed_inst_exp<= 12'd0;
         end
     end
 
