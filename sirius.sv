@@ -142,6 +142,12 @@ module sirius(
     wire [31:0]         mem_result;
     wire                mem_addr_error;
 
+    wire [31:0]         mem_cp0_ebase;
+    wire                mem_cp0_use_special_iv;
+    wire                mem_cp0_use_bootstrap_iv;
+    wire [7:0]          mem_cp0_exp_asid;
+    wire [7:0]          mem_cp0_cp0_exp_asid_en;
+
     // WB SIGNALS
     wire                wb_reg_write_en;
     wire [4:0]          wb_reg_write_dest;
@@ -160,8 +166,8 @@ module sirius(
     wire                 if_id_in_delay_slot_slave;
     wire                 if_id_fifo_empty;
     wire                 if_id_fifo_almost_empty;
-    wire [2:0]           if_id_inst_exp;
-    wire [2:0]           if_id_inst_exp_slave;
+    wire [11:0]          if_id_inst_exp;
+    wire [11:0]          if_id_inst_exp_slave;
 
     // ID-EX SIGNALS
     // MASTER
@@ -189,7 +195,8 @@ module sirius(
     reg             id_ex_alu_imm_src;
     reg [15:0]      id_ex_immediate;
     reg [4:0]       id_ex_shamt;
-    reg [2:0]       id_ex_inst_exp;
+    reg [11:0]      id_ex_inst_exp;
+    reg             id_ex_priv_inst;
 
     // SLAVE
     reg [31:0]      id_ex_pc_address_slave;
@@ -234,13 +241,14 @@ module sirius(
     reg             ex_mem_is_branch;
     reg [1:0]       ex_mem_type;
     reg [2:0]       ex_mem_size;
-    reg [2:0]       ex_mem_inst_exp;
+    reg [11:0]      ex_mem_inst_exp;
     reg [31:0]      ex_mem_daddr_psy;
     reg             ex_mem_data_uncached;
     reg             ex_mem_data_miss;
     reg             ex_mem_data_illegal;
     reg             ex_mem_data_tlb_invalid;
     reg             ex_mem_data_dirty;
+    reg             ex_mem_priv_inst;
 
     // SLAVE
     reg [31:0]      ex_mem_pc_address_slave;
@@ -344,7 +352,7 @@ module sirius(
         .write_address1         (if_pc_address),
         .write_data2            (inst_data_2),
         .write_address2         (if_pc_address + 32'd4),
-        .write_inst_exp1        ({if_inst_miss,if_inst_illegal,if_inst_tlb_invalid}),
+        .write_inst_exp1        ({mem_exl_set_mem,curr_ASID,if_inst_miss,if_inst_illegal,if_inst_tlb_invalid}),
         .data_out1              (if_id_instruction),
         .data_out2              (if_id_instruction_slave),
         .address_out1           (if_id_pc_address),
@@ -565,6 +573,7 @@ module sirius(
             id_ex_immediate         <= 16'd0;
             id_ex_shamt             <= 5'd0;
             id_ex_inst_exp          <= 3'd0;
+            id_ex_priv_inst         <= 1'd0;
         end
         else if(id_ex_en) begin 
             id_ex_pc_address        <= if_id_pc_address;
@@ -591,6 +600,7 @@ module sirius(
             id_ex_immediate         <= id_immediate;
             id_ex_shamt             <= id_shamt;
             id_ex_inst_exp          <= if_id_inst_exp;
+            id_ex_priv_inst         <= id_priv_inst;
         end
     end
 
@@ -779,6 +789,7 @@ module sirius(
             ex_mem_data_illegal         <= 1'd0;
             ex_mem_data_tlb_invalid     <= 1'd0;
             ex_mem_data_dirty           <= 1'd0;
+            ex_mem_priv_inst            <= 1'd0;
         end
         else if(ex_mem_en) begin 
             ex_mem_cp0_wen              <= ex_cop0_wen;
@@ -816,6 +827,7 @@ module sirius(
             ex_mem_data_illegal         <= ex_data_illegal;
             ex_mem_data_tlb_invalid     <= ex_data_tlb_invalid;
             ex_mem_data_dirty           <= ex_data_dirty;
+            ex_mem_priv_inst            <= id_ex_priv_inst;
         end
     end
 
@@ -890,7 +902,7 @@ module sirius(
         .data_illegal               (ex_mem_data_illegal),
         .data_tlb_invalid           (ex_mem_data_tlb_invalid),
         .data_dirty                 (ex_mem_data_dirty),
-        .inst_exp                   (ex_mem_inst_exp)
+        .inst_exp                   (ex_mem_inst_exp[2:0])
     );
 
     wire exp_detect_salve;
@@ -898,10 +910,15 @@ module sirius(
     exception_alpha exception(
         .clk                        (clk),
         .rst                        (rst),
-        .iaddr_alignment_error      (|ex_mem_pc_address[1:0]),
-        .daddr_alignment_error      (mem_addr_error),
+        .iaddr_alignment_error      (|ex_mem_pc_address[1:0] || ex_mem_inst_exp[1]),
+        .iaddr_tlb_miss             (ex_mem_inst_exp[2]),
+        .iaddr_tlb_invalid          (ex_mem_inst_exp[0]),
+        .daddr_alignment_error      (mem_addr_error || ex_mem_data_illegal),
+        .daddr_tlb_miss             (ex_mem_data_miss),
+        .daddr_tlb_invalid          (ex_mem_data_tlb_invalid),
+        .daddr_tlb_dirty            (ex_mem_data_dirty),
         .invalid_instruction        (ex_mem_invalid_instruction),
-        .priv_instruction           (1'b0),
+        .priv_instruction           (ex_mem_priv_inst && mem_cp0_user_mode),
         .syscall                    (ex_mem_syscall),
         .break_                     (ex_mem_break_),
         .eret                       (ex_mem_eret),
@@ -917,6 +934,13 @@ module sirius(
         .is_inst                    (ex_mem_is_inst),
         .slave_exp_undefined_inst   (ex_mem_undefined_inst_slave),
         .slave_exp_overflow         (ex_mem_overflow_slave),
+        .cp0_ebase                  (mem_cp0_ebase),
+        .cp0_use_special_iv         (mem_cp0_use_special_iv),
+        .cp0_use_bootstrap_iv       (mem_cp0_use_bootstrap_iv),
+        .exl_set_if                 (ex_mem_inst_exp[11]),
+        .exl_set_mem                (mem_exl_set_mem),
+        .asid_if                    (ex_mem_inst_exp[10:3]),
+        .asid_mem                   (curr_ASID),
         .exp_detect                 (exp_detect),
         .exp_detect_salve           (exp_detect_salve),
         .cp0_exp_en                 (mem_cp0_exp_en),
@@ -926,7 +950,9 @@ module sirius(
         .cp0_exp_bad_vaddr          (mem_cp0_exp_badvaddr),
         .cp0_exp_bad_vaddr_wen      (mem_cp0_exp_badvaddr_en),
         .exp_pc_address             (mem_exception_address),
-        .cp0_exp_bd                 (mem_cp0_exp_bd)
+        .cp0_exp_bd                 (mem_cp0_exp_bd),
+        .cp0_exp_asid               (mem_cp0_exp_asid),
+        .cp0_exp_asid_en            (mem_cp0_cp0_exp_asid_en)
     );
 
     cp0 coprocessor(
@@ -948,17 +974,23 @@ module sirius(
         .epc_address            (mem_cp0_epc_address),
         .allow_interrupt        (mem_cp0_allow_interrupt),
         .interrupt_flag         (mem_cp0_interrupt_flag),
-        .user_mode                  (mem_cp0_user_mode),
-        .cp0_kseg0_uncached         (mem_cp0_kseg0_uncached),
-        .curr_ASID                  (mem_cp0_curr_ASID),
-        .cp0_index                  (mem_cp0_index),
-        .cp0_random                 (mem_cp0_random),
-        .cp0_tlb_conf_in            (mem_cp0_tlb_conf_in), // In CP0's perspective
-        .cp0_tlb_conf_out           (mem_cp0_tlb_conf_out),
-        .miss_probe                 (mem_tlb_miss_probe),
-        .matched_index_probe        (mem_tlb_matched_index_probe),
-        .tlbr                       (ex_mem_tlbr),
-        .tlbp                       (ex_mem_tlbp)
+        .user_mode              (mem_cp0_user_mode),
+        .cp0_kseg0_uncached     (mem_cp0_kseg0_uncached),
+        .curr_ASID              (mem_cp0_curr_ASID),
+        .cp0_index              (mem_cp0_index),
+        .cp0_random             (mem_cp0_random),
+        .cp0_tlb_conf_in        (mem_cp0_tlb_conf_in), // In CP0's perspective
+        .cp0_tlb_conf_out       (mem_cp0_tlb_conf_out),
+        .miss_probe             (mem_tlb_miss_probe),
+        .matched_index_probe    (mem_tlb_matched_index_probe),
+        .tlbr                   (ex_mem_tlbr),
+        .tlbp                   (ex_mem_tlbp),
+        .exp_asid_en            (mem_cp0_cp0_exp_asid_en),
+        .exp_asid               (mem_cp0_exp_asid),
+        .ebase_address          (mem_cp0_ebase),
+        .use_special_iv         (mem_cp0_use_special_iv),
+        .use_bootstrap_iv       (mem_cp0_use_bootstrap_iv),
+        .exl_set                (mem_exl_set_mem)
     );
 
     always_ff @(posedge clk) begin

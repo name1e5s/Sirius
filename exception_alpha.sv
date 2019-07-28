@@ -48,7 +48,7 @@ module exception_alpha(
         output logic                cp0_exp_bad_vaddr_wen,
         output logic [31:0]         exp_pc_address,
         output logic                cp0_exp_bd,
-        output logic                cp0_exp_asid,
+        output logic [7:0]          cp0_exp_asid,
         output logic                cp0_exp_asid_en
 );
     
