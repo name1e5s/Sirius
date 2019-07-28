@@ -21,6 +21,11 @@ module mmu_top(
         output logic            data_ok,
         output logic [31:0]     data_data,
 
+        // Cache control
+        input                   inst_hit_invalidate,
+        input                   data_hit_writeback,
+        input                   index_invalidate,
+
         // AXI
         //ar
         output logic [3 :0]     arid,
@@ -108,7 +113,7 @@ module mmu_top(
         .clk            (clk),
         .rst            (rst),
         .ien            (inst_en),
-        .iaddr_psy      (iaddr_psy),
+        .iaddr_psy      (inst_hit_invalidate? daddr_psy : iaddr_psy),
         .iaddr_type     (iaddr_type),
         .inst_ok        (inst_ok),
         .inst_ok_1      (inst_ok_1),
@@ -122,7 +127,9 @@ module mmu_top(
         .idata_rdata    (idata_rdata),
         .idata_rvalid   (idata_rvalid),
         .idata_rlast    (idata_rlast),
-        .mmu_running    (inst_running)
+        .mmu_running    (inst_running),
+        .inst_hit_invalidate(inst_hit_invalidate),
+        .index_invalidate(index_invalidate)
     );
 
     // Data channel
@@ -173,7 +180,9 @@ module mmu_top(
         .daddr_wreq_ok  (daddr_wreq_ok),
         .ddata_wready   (ddata_wready),
         .ddata_bvalid   (ddata_bvalid),
-        .mmu_running    (data_running)
+        .mmu_running    (data_running),
+        .data_hit_writeback(data_hit_writeback),
+        .index_invalidate(index_invalidate)
     );
 
     // Read channel 

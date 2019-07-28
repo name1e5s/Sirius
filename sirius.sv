@@ -25,7 +25,12 @@ module sirius(
         output logic            data_uncached,
         output logic [31:0]     data_wdata,
         input                   data_ok,
-        input [31:0]            data_data
+        input [31:0]            data_data,
+
+        // Cache control channel
+        output logic            inst_hit_invalidate,
+        output logic            data_hit_writeback,
+        output logic            index_invalidate
 );
 
     wire                if_en, if_id_en, id_ex_en, ex_mem_en, mem_wb_en;
@@ -141,6 +146,9 @@ module sirius(
     wire                mem_tlb_matched_index_probe;
     wire [31:0]         mem_result;
     wire                mem_addr_error;
+    wire                mem_inst_hit_invalidate;
+    wire                mem_data_hit_writeback;
+    wire                mem_index_invalidate;
 
     wire [31:0]         mem_cp0_ebase;
     wire                mem_cp0_use_special_iv;
@@ -889,6 +897,7 @@ module sirius(
         .address                    (ex_mem_daddr_psy),
         .ex_result                  (ex_mem_result),
         .rt_value                   (ex_mem_rt_value),
+        .rt_addr                    (ex_mem_wb_reg_dest),
         .mem_type                   (ex_mem_type),
         .mem_size                   (ex_mem_size),
         .mem_signed                 (ex_mem_unsigned_flag),
@@ -903,10 +912,16 @@ module sirius(
         .data_illegal               (ex_mem_data_illegal),
         .data_tlb_invalid           (ex_mem_data_tlb_invalid),
         .data_dirty                 (ex_mem_data_dirty),
-        .inst_exp                   (ex_mem_inst_exp[2:0])
+        .inst_exp                   (ex_mem_inst_exp[2:0]),
+        .inst_hit_invalidate        (mem_inst_hit_invalidate),
+		.data_hit_writeback	        (mem_data_hit_writeback),
+		.index_invalidate	        (mem_index_invalidate)
     );
 
     wire exp_detect_salve;
+    assign inst_hit_invalidate = mem_inst_hit_invalidate && ~exp_detect;
+    assign data_hit_writeback = mem_data_hit_writeback && ~exp_detect;
+    assign index_invalidate = mem_index_invalidate && ~exp_detect;
 
     exception_alpha exception(
         .clk                        (clk),

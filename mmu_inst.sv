@@ -20,6 +20,10 @@ module mmu_inst(
         input [31:0]                iaddr_psy,
         input                       iaddr_type, // 0 as cached, 1 as uncacahed
         
+        // Cache control
+        input                       inst_hit_invalidate,
+        input                       index_invalidate,
+
         output logic                inst_ok,
         output logic                inst_ok_1,
         output logic                inst_ok_2,
@@ -55,6 +59,7 @@ module mmu_inst(
     wire [  6:0]    ram_a       = inst_index;
     wire [530:0]    ram_d;
     logic           ram_we;
+    logic           clear_valid;
 
     wire [530:0]    icache_return; // Connect to output channel of ram.
     wire [ 31:0]    icache_return_data[0:15];
@@ -120,6 +125,8 @@ module mmu_inst(
         else if(cstate == CACHED_REFILL) begin
             icache_valid[inst_index] <= 1'b1;
         end
+        else if(clear_valid)
+            icache_valid[inst_index] <= 1'b0;
     end
 
     reg [3:0] receive_counter;
@@ -162,6 +169,9 @@ module mmu_inst(
         end
     end
 
+    wire hit_it = (inst_tag == icache_return_tag && 
+                    icache_valid[inst_index]) || index_invalidate;
+
     // WARNING -- COMPLEX COMB LOGIC 
     // "We will still hate the tools."
     always_comb begin : set_all_output
@@ -179,6 +189,8 @@ module mmu_inst(
         ram_we      = 1'd0;
         mmu_running = 1'd0;
 
+        clear_valid = 1'd0;
+
         // For perf tunning...
         cache_hit   = 1'd0;
         cache_miss  = 1'd0;
@@ -187,6 +199,9 @@ module mmu_inst(
         unique case(cstate)
         IDLE: begin
             if(rst || !ien) begin // We do nothing here.
+            end
+            else if(inst_hit_invalidate && hit_it) begin
+                clear_valid = 1'd1;
             end
             else if(iaddr_type) begin// Uncacahed read
                 iaddr_req   = iaddr_psy;
@@ -200,8 +215,7 @@ module mmu_inst(
                     nstate  = UNCACHED_SHAKE;
                 end
             end
-            else if(inst_tag == icache_return_tag && 
-                    icache_valid[inst_index]) begin // Cache hit
+            else if(hit_it) begin // Cache hit
                 cache_hit   = 1'd1;
                 inst_ok     = 1'd1;
                 inst_ok_1   = 1'd1;

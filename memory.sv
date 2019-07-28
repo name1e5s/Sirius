@@ -7,6 +7,7 @@ module memory(
         input [31:0] 	            address,
         input [31:0]                ex_result,
         input [31:0] 	            rt_value,
+        input [ 4:0]                rt_addr,
         input [ 1:0] 	            mem_type,
         input [ 2:0] 	            mem_size,
         input 		                mem_signed,
@@ -28,7 +29,12 @@ module memory(
         output logic [31:0]         result,
         // Report error
         output logic                address_error,
-        output logic                tlb_modified
+        output logic                tlb_modified,
+
+        // Cache operation
+        output logic                inst_hit_invalidate,
+        output logic                data_hit_writeback,
+        output logic                index_invalidate
 );
 
     assign mem_en       = |mem_type && (~address_error) && 
@@ -36,6 +42,10 @@ module memory(
                       ~((~data_dirty && |mem_wen));
     assign mem_addr     = address;
     assign tlb_modified = (data_dirty && |mem_wen);
+
+    assign inst_hit_invalidate = mem_type == `MEM_CACH && (rt_addr == 5'b00000 || rt_addr == 5'b10000);
+    assign data_hit_invalidate = mem_type == `MEM_CACH && (rt_addr == 5'b00001 || rt_addr == 5'b10101);
+    assign index_invalidate    = mem_type == `MEM_CACH && (rt_addr == 5'b00000 || rt_addr == 5'b00001);
 
     always_comb begin : detect_alignment_error
         if(mem_type != `MEM_NOOP) begin

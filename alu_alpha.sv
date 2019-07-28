@@ -33,7 +33,7 @@ module alu_alpha(
         output logic                hilo_wen,
         output logic [63:0]         hilo_result,
         output logic [31:0]         result,
-        output logic                stall_o         // Stall pipeline when a mdu operation is running and an instruction needs 
+        output logic                stall_o,        // Stall pipeline when a mdu operation is running and an instruction needs 
                                                     // result in hilo.
 );
 
