@@ -144,7 +144,7 @@ module exception_alpha(
             cp0_exp_code = mem_wen? 5'h03 : 5'h02;
             $display("[EXP] DTLB Invalid at 0x%x",pc_address);
         end
-        else if(daddr_tlb_dirty) begin
+        else if(mem_wen && !daddr_tlb_dirty) begin
             cp0_exp_asid = asid_if;
             cp0_exp_asid_en = 1'd1;
             cp0_exp_bad_vaddr = mem_address;

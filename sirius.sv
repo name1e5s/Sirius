@@ -155,6 +155,7 @@ module sirius(
     wire                mem_cp0_use_bootstrap_iv;
     wire [7:0]          mem_cp0_exp_asid;
     wire [7:0]          mem_cp0_cp0_exp_asid_en;
+    wire                mem_exl_set_mem;
 
     // WB SIGNALS
     wire                wb_reg_write_en;
@@ -360,7 +361,7 @@ module sirius(
         .write_address1         (if_pc_address),
         .write_data2            (inst_data_2),
         .write_address2         (if_pc_address + 32'd4),
-        .write_inst_exp1        ({mem_exl_set_mem,curr_ASID,if_inst_miss,if_inst_illegal,if_inst_tlb_invalid}),
+        .write_inst_exp1        ({mem_exl_set_mem,mem_cp0_curr_ASID,if_inst_miss,if_inst_illegal,if_inst_tlb_invalid}),
         .data_out1              (if_id_instruction),
         .data_out2              (if_id_instruction_slave),
         .address_out1           (if_id_pc_address),
@@ -535,7 +536,7 @@ module sirius(
         .fifo_almost_empty          (if_id_fifo_almost_empty),
         .enable_master              (if_id_en),
         .enable_slave               (id_enable_slave),
-        .id_tlb_error               (|inst_exp2[2:0])
+        .id_tlb_error               (|if_id_inst_exp_slave[2:0])
     );
 
     logic [63:0] id_enable_slave_counter;
@@ -956,7 +957,7 @@ module sirius(
         .exl_set_if                 (ex_mem_inst_exp[11]),
         .exl_set_mem                (mem_exl_set_mem),
         .asid_if                    (ex_mem_inst_exp[10:3]),
-        .asid_mem                   (curr_ASID),
+        .asid_mem                   (mem_cp0_curr_ASID),
         .exp_detect                 (exp_detect),
         .exp_detect_salve           (exp_detect_salve),
         .cp0_exp_en                 (mem_cp0_exp_en),
