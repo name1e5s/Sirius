@@ -249,7 +249,7 @@ module decoder_ctrl(
                     {`ALU_ADDU, `SRC_IMM, `SIGN_EXTENDED, `MEM_LOAD, `SZ_RIGH, rt, 1'b1, `ZERO_EXTENDED};
             {6'b101111, 6'bxxxxxx}: begin // CACHE
                 {alu_op, alu_src, alu_imm_src, mem_type, mem_size, wb_reg_dest, wb_reg_en, unsigned_flag} = 
-                    {`ALU_ADDU, `SRC_REG, `SIGN_EXTENDED, `MEM_CACH, `SZ_FULL, rt, 1'b0, `ZERO_EXTENDED};
+                    {`ALU_ADDU, `SRC_IMM, `SIGN_EXTENDED, `MEM_CACH, `SZ_BYTE, rt, 1'b0, `ZERO_EXTENDED};
                 priv_inst = 1'b1;
             end
             // MIPS32r1 end
