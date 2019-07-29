@@ -51,7 +51,7 @@ module memory(
     always_comb begin : detect_write_size
         if(mem_size == `SZ_BYTE)
             data_size = 3'd0;
-        else if(mem_size = `SZ_HALF)
+        else if(mem_size == `SZ_HALF)
             data_size = 3'd1;
         else
             data_size = 3'd2;

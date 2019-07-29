@@ -13,8 +13,8 @@ module mmu_data(
         input [31:0]                daddr_psy,
         input [31:0]                wdata,
         input                       daddr_type, // 0 as cacahe...
-        input [1:0]                 data_size_in,
-        output logic [1:0]          data_size_out,
+        input [2:0]                 data_size_in,
+        output logic [2:0]          data_size_out,
         
         output logic                data_ok,
         output logic [31:0]         data_data,
