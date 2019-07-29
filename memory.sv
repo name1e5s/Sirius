@@ -25,6 +25,7 @@ module memory(
         output logic [31:0]         mem_addr,
         output logic [31:0]         mem_wdata,
         input logic [31:0]          mem_rdata,
+        output logic [2:0]          data_size,
 
         output logic [31:0]         result,
         // Report error
@@ -46,6 +47,15 @@ module memory(
     assign inst_hit_invalidate = mem_type == `MEM_CACH && (rt_addr == 5'b00000 || rt_addr == 5'b10000);
     assign data_hit_writeback = mem_type == `MEM_CACH && (rt_addr == 5'b00001 || rt_addr == 5'b10101);
     assign index_invalidate    = mem_type == `MEM_CACH && (rt_addr == 5'b00000 || rt_addr == 5'b00001);
+
+    always_comb begin : detect_write_size
+        if(mem_size == `SZ_BYTE)
+            data_size = 3'd0;
+        else if(mem_size = `SZ_HALF)
+            data_size = 3'd1;
+        else
+            data_size = 3'd2;
+    end
 
     always_comb begin : detect_alignment_error
         if(mem_type != `MEM_NOOP) begin

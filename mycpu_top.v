@@ -59,6 +59,7 @@ module mycpu_top(
    wire [31:0]  iaddr_i, idata_i, idata2_i, daddr_i, drdata_i, dwdata_i;
    wire inst_uncached, data_uncached;
    wire inst_hit_invalidate, data_hit_writeback, index_invalidate;
+   wire [2:0] data_size;
    mmu_top mmu_0(
 			.clk                (aclk),
 			.rst                (~aresetn),
@@ -76,6 +77,7 @@ module mycpu_top(
             .data_wdata         (dwdata_i),
             .data_data          (drdata_i),
             .data_ok            (dok),
+			.data_size			(data_size),
 
 			.inst_uncached		(inst_uncached),
 			.data_uncached		(data_uncached),
@@ -139,6 +141,7 @@ module mycpu_top(
               .data_wdata         (dwdata_i),
               .data_data          (drdata_i),
               .data_ok            (dok),
+			  .data_size 		  (data_size),
 
 			  .inst_uncached		(inst_uncached),
 			  .data_uncached		(data_uncached),

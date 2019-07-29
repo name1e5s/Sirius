@@ -18,6 +18,7 @@ module mmu_top(
         input [31:0]            data_addr,
         input                   data_uncached,
         input [31:0]            data_wdata,
+        input [2:0]             data_size,
         output logic            data_ok,
         output logic [31:0]     data_data,
 
@@ -72,7 +73,6 @@ module mmu_top(
 
     // Set default value
     assign  arid    = 4'd0;
-    assign  arsize  = 3'b010;
     assign  arlock  = 2'd0;
     assign  arcache = 4'd0;
     assign  arprot  = 3'd0;
@@ -80,7 +80,6 @@ module mmu_top(
     assign  rready = 1'b1;
 
     assign  awid    = 4'd0;
-    assign  awsize  = 3'b010;
     assign  awlock  = 2'd0;
     assign  awcache = 4'd0;
     assign  awprot  = 3'd0;
@@ -152,6 +151,7 @@ module mmu_top(
     logic       daddr_wreq_ok;
     logic       ddata_wready;
     logic       ddata_bvalid;
+    logic [2:0] data_size_out;
 
     mmu_data data_ctrl(
         .clk            (clk),
@@ -174,6 +174,8 @@ module mmu_top(
         .write_en       (write_en),
         .write_type     (write_type),
         .write_byte_en  (write_byte_en),
+        .data_size_in   (data_size),
+        .data_size_out  (data_size_out),
         .dwvalid        (dwvalid),
         .dwdata         (dwdata),
         .dwlast         (dwlast),
@@ -200,11 +202,13 @@ module mmu_top(
             idata_rdata     = 32'd0;
             idata_rvalid    = 1'd0;
             idata_rlast     = 1'd0;
+            arsize          = dread_type ? data_size : 3'b010;
         end
         else begin
             araddr          = iaddr_req;
             arlen           = iread_type ? 8'd0 : 8'd15;
             arburst         = iread_type ? 2'd0 : 2'd1;
+            arsize          = 3'b010;
             arvalid         = iread_en;
             iaddr_req_ok    = arready;
             idata_rdata     = rdata;
@@ -230,6 +234,7 @@ module mmu_top(
         daddr_wreq_ok   = awready;
         ddata_wready    = wready;
         ddata_bvalid    = bvalid;
+        awsize          = write_type ? data_size_out : 3'b010;
     end
 
 endmodule

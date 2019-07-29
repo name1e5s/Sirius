@@ -13,6 +13,8 @@ module mmu_data(
         input [31:0]                daddr_psy,
         input [31:0]                wdata,
         input                       daddr_type, // 0 as cacahe...
+        input [1:0]                 data_size_in,
+        output logic [1:0]          data_size_out,
         
         output logic                data_ok,
         output logic [31:0]         data_data,
@@ -164,12 +166,14 @@ module mmu_data(
     data_fifo dfifo(
         .clk            (clk),
         .rst            (rst),
+        .size_in        (data_size_in),
         .addr_in        (daddr_psy),
         .data_in        (wdata),
         .dwen_in        (dwen),
         .addr_out       (dfifo_addr),
         .data_out       (dfifo_data),
         .dwen_out       (dfifo_dwen),
+        .size_out       (data_size_out),
         .read_en        (dfifo_read_en),
         .write_en       (dfifo_write_en),
         .full           (dfifo_full),

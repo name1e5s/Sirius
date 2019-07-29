@@ -26,6 +26,7 @@ module sirius(
         output logic [31:0]     data_wdata,
         input                   data_ok,
         input [31:0]            data_data,
+        output logic [2:0]      data_size,
 
         // Cache control channel
         output logic            inst_hit_invalidate,
@@ -907,6 +908,7 @@ module sirius(
         .mem_addr                   (data_addr),
         .mem_wdata                  (data_wdata),
         .mem_rdata                  (data_data),
+        .data_size                  (data_size),
         .result                     (mem_result),
         .address_error              (mem_addr_error),
         .data_miss                  (ex_mem_data_miss),

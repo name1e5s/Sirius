@@ -4,11 +4,13 @@ module data_fifo(
     input                   rst,
 
     // Input channel
+    input [2:0]             size_in,
     input [31:0]            addr_in,
     input [31:0]            data_in,
     input [3:0]             dwen_in,
 
     // Output channel
+    output wire  [2:0]      size_out,
     output wire  [31:0]     addr_out,
     output wire  [31:0]     data_out,
     output wire  [3:0]      dwen_out,
@@ -21,11 +23,11 @@ module data_fifo(
     output logic            empty
 );
 
-    wire [67:0] din;
-    wire [67:0] dout;
+    wire [70:0] din;
+    wire [70:0] dout;
 
-    assign din          = { dwen_in, data_in, addr_in };
-    assign { dwen_out, data_out, addr_out } = dout;
+    assign din          = { size_in, dwen_in, data_in, addr_in };
+    assign { size_out, dwen_out, data_out, addr_out } = dout;
 
 /*
     fifo_generator_0 fifo_generator(
@@ -41,7 +43,7 @@ module data_fifo(
 */
 
     // Use registers as fifo... Fuck xilinx
-    reg [67:0] _fifo[0:63];
+    reg [70:0] _fifo[0:63];
 
     reg [5:0] read_pointer;
     reg [5:0] write_pointer;
@@ -69,7 +71,7 @@ module data_fifo(
     always_ff @(posedge clk) begin
         if(rst) begin
             for(int i = 0; i < 64; i++)
-                _fifo[i] <= 67'd0;
+                _fifo[i] <= 70'd0;
         end
         else if(write_en)
             _fifo[write_pointer] <= din;
