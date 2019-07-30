@@ -55,6 +55,7 @@ module cp0(
     reg [31:0]              EntryLo0;       // 2 0
     reg [31:0]              EntryLo1;       // 3 0
     reg [31:0]              Context;        // 4 0 -- NEW
+    reg [31:0]              Wired;          // 6 0 -- NEW
     reg [31:0] 		        BadVAddr;       // 8 0
     reg [32:0] 		        Count;          // 9 0
     reg [31:0]              EntryHi;        // 10 0
@@ -72,8 +73,8 @@ module cp0(
     assign interrupt_flag    = Status[15:8] & Cause[15:8];
     assign curr_ASID         = EntryHi[7:0];
     assign cp0_index         = Index[3:0];
-    assign cp0_random        = 4'd4; // Chosen by fair dice roll
-                                     // guaranteed to be random
+    assign cp0_random        = 4'hf;    // Chosen by fair dice roll
+                                        // guaranteed to be random
     assign user_mode = Status[4:1]==4'b1000;
     assign cp0_kseg0_uncached = Config[2:0] == 3'd2;
     assign cp0_tlb_conf_out = { EntryHi[31:13], EntryLo0[0] && EntryLo0[1], EntryHi[7:0], EntryLo0[29:1], EntryLo1[29:1]};
@@ -117,6 +118,8 @@ module cp0(
                 rdata = Config;
             { 5'd16, 3'd1 }:
                 rdata = Config1;
+            { 5'd6, 3'd0 }:
+                rdata = Wired;
             // SiriusG end
             default:
                 rdata = 32'd0;
@@ -140,6 +143,7 @@ module cp0(
             Config          <= {1'b1, 21'b0, 3'b1, 7'b0}; // MIPS32R1
             Config1         <= {1'd0, 6'd15, 3'd1, 3'd5, 3'd0, 3'd1, 3'd5, 3'd0, 7'd0};
             timer_int       <= 1'd0;
+            Wired           <= 32'd0;
         end
         else begin
             Cause[14:10] <= {timer_int,hint};
@@ -183,6 +187,9 @@ module cp0(
                         EBase[29:12]    <= wdata[29:12];
                     { 5'd16, 3'd1 }: begin
                         Config[2:0]     <= wdata[2:0];
+                    end
+                    { 5'd6, 3'd0 }:
+                        Wired[3:0]      <= wdata[3:0];
                     end
                     default: begin
                         // Make vivado happy. :)
