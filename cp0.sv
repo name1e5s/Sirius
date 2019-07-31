@@ -78,7 +78,7 @@ module cp0(
     assign user_mode = Status[4:1]==4'b1000;
     assign cp0_kseg0_uncached = Config[2:0] == 3'd2;
     assign cp0_tlb_conf_out = { EntryHi[31:13], EntryLo0[0] && EntryLo0[1], EntryHi[7:0], EntryLo0[29:1], EntryLo1[29:1]};
-    assign ebase_address = EBase;
+    assign ebase_address = 32'h80000000;
     assign use_special_iv = Cause[23];
     assign use_bootstrap_iv = Status[22];
     assign exl_set = Status[1];
@@ -112,8 +112,6 @@ module cp0(
                 rdata = Compare;
             { 5'd15, 3'd0 }:
                 rdata = PRId;
-            { 5'd15, 3'd1 }:
-                rdata = EBase;
             { 5'd16, 3'd0 }:
                 rdata = Config;
             { 5'd16, 3'd1 }:
@@ -136,7 +134,6 @@ module cp0(
             EntryLo1[31:30] <= 2'd0;
             Index           <= 32'd0;
             Context         <= 32'd0;
-            EBase           <= 32'h8000_0000;
             Compare         <= 32'd0;
             Context         <= 32'd0;
             PRId            <= 32'h0001_8000; // MIPS 4KC
@@ -183,12 +180,10 @@ module cp0(
                         Compare         <= wdata;
                         timer_int       <= 1'd0;
                     end
-                    { 5'd15, 3'd1 }:
-                        EBase[29:12]    <= wdata[29:12];
                     { 5'd16, 3'd1 }: begin
                         Config[2:0]     <= wdata[2:0];
                     end
-                    { 5'd6, 3'd0 }:
+                    { 5'd6, 3'd0 }: begin
                         Wired[3:0]      <= wdata[3:0];
                     end
                     default: begin
