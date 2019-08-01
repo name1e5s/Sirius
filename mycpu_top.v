@@ -1,7 +1,7 @@
 `timescale 1ns / 1ps
 
 module mycpu_top(
-		 input [5 :0]  int,
+		 input [4 :0]  int,
 		 input 	       aclk,
 		 input 	       aresetn,
 

@@ -143,7 +143,7 @@ module cp0(
             Wired           <= 32'd0;
         end
         else begin
-            Cause[14:10] <= {timer_int,hint};
+            Cause[15:10] <= {timer_int,hint};
             Count <= Count + 33'd1;
             if(Compare != 32'd0 && Compare == Count[32:1])
                 timer_int <= 1'd1;
