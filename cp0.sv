@@ -78,7 +78,7 @@ module cp0(
     assign user_mode = Status[4:1]==4'b1000;
     assign cp0_kseg0_uncached = Config[2:0] == 3'd2;
     assign cp0_tlb_conf_out = { EntryHi[31:13], EntryLo0[0] && EntryLo0[1], EntryHi[7:0], EntryLo0[29:1], EntryLo1[29:1]};
-    assign ebase_address = 32'h80000000;
+    assign ebase_address = EBase;
     assign use_special_iv = Cause[23];
     assign use_bootstrap_iv = Status[22];
     assign exl_set = Status[1];
@@ -118,6 +118,8 @@ module cp0(
                 rdata = Config1;
             { 5'd6, 3'd0 }:
                 rdata = Wired;
+            { 5'd15, 3'd1 }:
+                rdata = EBase;
             // SiriusG end
             default:
                 rdata = 32'd0;
@@ -132,6 +134,7 @@ module cp0(
             EntryHi         <= 32'd0;
             EntryLo0[31:30] <= 2'd0;
             EntryLo1[31:30] <= 2'd0;
+            EBase           <= 32'h8000_0000;
             Index           <= 32'd0;
             Context         <= 32'd0;
             Compare         <= 32'd0;
@@ -185,6 +188,10 @@ module cp0(
                     end
                     { 5'd6, 3'd0 }: begin
                         Wired[3:0]      <= wdata[3:0];
+                    end
+                    { 5'd15, 3'd1 }: begin
+                        EBase[29:12]    <= wdata[29:12];
+                        EBase[9:0]      <= wdata[9:0];
                     end
                     default: begin
                         // Make vivado happy. :)
