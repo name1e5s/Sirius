@@ -77,7 +77,7 @@ module cp0(
                                         // guaranteed to be random
     assign user_mode = Status[4:1]==4'b1000;
     assign cp0_kseg0_uncached = Config[2:0] == 3'd2;
-    assign cp0_tlb_conf_out = { EntryHi[31:13], EntryLo0[0] && EntryLo0[1], EntryHi[7:0], EntryLo0[29:1], EntryLo1[29:1]};
+    assign cp0_tlb_conf_out = { EntryHi[31:13], EntryLo0[0] && EntryLo1[0], EntryHi[7:0], EntryLo0[29:1], EntryLo1[29:1]};
     assign ebase_address = EBase;
     assign use_special_iv = Cause[23];
     assign use_bootstrap_iv = Status[22];
@@ -213,8 +213,8 @@ module cp0(
             if(tlbr) begin
                 EntryHi[31:13] <= cp0_tlb_conf_in[85:67];
                 EntryHi[7:0]   <= cp0_tlb_conf_in[65:58];
-                EntryLo0       <= {cp0_tlb_conf_in[57:29],cp0_tlb_conf_in[66]};
-                EntryLo1       <= {cp0_tlb_conf_in[28:0],cp0_tlb_conf_in[66]};
+                EntryLo0       <= {2'd0,cp0_tlb_conf_in[57:29],cp0_tlb_conf_in[66]};
+                EntryLo1       <= {2'd0,cp0_tlb_conf_in[28:0],cp0_tlb_conf_in[66]};
             end
             if(tlbp) begin
                 Index[3:0]     <= matched_index_probe;

@@ -65,9 +65,9 @@ module tlb_common(
     end
 
     assign miss     = (matched == 16'd0);
-    assign valid    = vaddr[12] ? tlb_data[matched_index][0] : tlb_data[matched_index][29];
+    assign valid    = miss? 1'd1 : (vaddr[12] ? tlb_data[matched_index][0] : tlb_data[matched_index][29]);
     assign dirty    = vaddr[12] ? tlb_data[matched_index][1] : tlb_data[matched_index][30];
     assign uncached = vaddr[12] ? (tlb_data[matched_index][4:2] == 3'd2) : (tlb_data[matched_index][33:31] == 3'd2);
-    assign paddr    = vaddr[12] ? tlb_data[matched_index][28:5] : tlb_data[matched_index][57:34];
+    assign paddr    = vaddr[12] ? {tlb_data[matched_index][24:5], vaddr[11:0]} : {tlb_data[matched_index][53:34],vaddr[11:0]};
 
 endmodule
