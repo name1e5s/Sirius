@@ -47,7 +47,8 @@ module mmu_inst(
         CACHED_WAIT     = 3'b010,
         CACHED_REFILL   = 3'b011,
         UNCACHED_SHAKE  = 3'b101,
-        UNCACHED_RETURN = 3'b110
+        UNCACHED_RETURN = 3'b110,
+        CACHECTRL_WAIT  = 3'b111
     } cstate, nstate;
 
     reg  [127:0]    icache_valid;
@@ -169,8 +170,8 @@ module mmu_inst(
         end
     end
 
-    wire hit_it = (inst_tag == icache_return_tag && 
-                    icache_valid[inst_index]) || index_invalidate;
+    wire hit_it = ((inst_tag == icache_return_tag || index_invalidate) && 
+                    icache_valid[inst_index]);
 
     // WARNING -- COMPLEX COMB LOGIC 
     // "We will still hate the tools."
@@ -200,8 +201,10 @@ module mmu_inst(
         IDLE: begin
             if(rst || !ien) begin // We do nothing here.
             end
-            else if(inst_hit_invalidate && hit_it) begin
-                clear_valid = 1'd1;
+            else if(inst_hit_invalidate) begin
+                clear_valid = hit_it;
+                if(hit_it)
+                    nstate = CACHECTRL_WAIT;
             end
             else if(iaddr_type) begin// Uncacahed read
                 iaddr_req   = iaddr_psy;
@@ -236,6 +239,9 @@ module mmu_inst(
                     nstate  = CACHED_SHAKE;
                 end
             end
+        end
+        CACHECTRL_WAIT: begin
+            nstate = IDLE;
         end
         UNCACHED_SHAKE: begin
             iaddr_req   = iaddr_psy;

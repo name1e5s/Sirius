@@ -209,7 +209,7 @@ module mmu_data(
         if(rst) begin
             dcache_dirty <= 128'd0;
         end
-        else if(cstate == CACHED_REFILL) begin
+        else if(cstate == CACHED_REFILL || valid_change) begin
             dcache_dirty[data_index] <= 1'b0;
         end
         else if(writeback_required) begin
@@ -310,7 +310,7 @@ module mmu_data(
         end
     end
 
-    wire hit_it = (dcache_valid[data_index] && dcache_return_tag == data_tag) || index_invalidate;
+    wire hit_it = (dcache_valid[data_index] && (dcache_return_tag == data_tag || index_invalidate));
 
     // Read channel
     always_comb begin
@@ -347,10 +347,13 @@ module mmu_data(
             if(rst || !den) begin
                 // Make vivado happy
             end
-            else if(data_hit_writeback && hit_it) begin
-                valid_change = 1'd1;
-                write_required = dcache_dirty[data_index];
-                if(dcache_dirty[data_index])
+            else if(data_hit_writeback) begin
+                if(hit_it && dcache_dirty[data_index] && ~(dfifo_empty && wcstate == WIDLE))
+                    nstate = FIFO_WAIT;
+                valid_change = hit_it;
+                write_required = hit_it && dcache_dirty[data_index];
+                data_ok = ~hit_it;
+                if(hit_it)
                     nstate = CACHECTRL_WAIT;
             end
             else if(daddr_type) begin // Uncached access
