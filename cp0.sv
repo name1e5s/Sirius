@@ -52,6 +52,7 @@ module cp0(
    
     // Control register definition\
     reg [31:0]              Index;          // 0 0
+    reg [31:0]              Random;         // 1 0 -- NEW
     reg [31:0]              EntryLo0;       // 2 0
     reg [31:0]              EntryLo1;       // 3 0
     reg [31:0]              Context;        // 4 0 -- NEW
@@ -73,8 +74,7 @@ module cp0(
     assign interrupt_flag    = Status[15:8] & Cause[15:8];
     assign curr_ASID         = EntryHi[7:0];
     assign cp0_index         = Index[3:0];
-    assign cp0_random        = 4'hf;    // Chosen by fair dice roll
-                                        // guaranteed to be random
+    assign cp0_random        = {28'd0, Random[3:0]};
     assign user_mode = Status[4:1]==4'b1000;
     assign cp0_kseg0_uncached = Config[2:0] == 3'd2;
     assign cp0_tlb_conf_out = { EntryHi[31:13], EntryLo0[0] && EntryLo1[0], EntryHi[7:0], EntryLo0[29:1], EntryLo1[29:1]};
@@ -100,6 +100,8 @@ module cp0(
             // SiriusG begin
             { 5'd10, 3'd0 }:
                 rdata = EntryHi;
+            { 5'd2, 3'd0 }:
+                rdata = {28'd0, Random[3:0]};
             { 5'd2, 3'd0 }:
                 rdata = EntryLo0;
             { 5'd3, 3'd0 }:
@@ -144,10 +146,12 @@ module cp0(
             Config1         <= {1'd0, 6'd15, 3'd1, 3'd5, 3'd0, 3'd1, 3'd5, 3'd0, 7'd0};
             timer_int       <= 1'd0;
             Wired           <= 32'd0;
+            Random          <= 32'd0;
         end
         else begin
             Cause[15:10] <= {timer_int,hint};
             Count <= Count + 33'd1;
+            Random <= Wired + Count[31:0];
             if(Compare != 32'd0 && Compare == Count[32:1])
                 timer_int <= 1'd1;
             if(wen) begin
