@@ -23,79 +23,32 @@ module branch(
     end
 
     always_comb begin : take_branch
-        if(!en) begin
-            branch_taken = 1'b0;
-            branch_address = 32'hxxxxxxxx;
-        end else if(is_branch_instr) begin
+        branch_address = branch_immed;
+        branch_taken = 1'b0;
+        if(en && is_branch_instr) begin
             unique case(branch_type)
             `B_EQNE:
                 unique case(instruction[27:26])
                 2'b00: // BEQ
-                    if(data_rs == data_rt) begin
-                        branch_address = branch_immed;
-                        branch_taken = 1'b1;
-                    end
-                    else begin
-                        branch_address = 32'hxxxxxxxx;
-                        branch_taken = 1'b0;
-                    end
+                    branch_taken = (data_rs == data_rt);
                 2'b01: // BNE
-                    if(data_rs != data_rt) begin
-                        branch_address = branch_immed;
-                        branch_taken = 1'b1;
-                    end
-                    else begin
-                        branch_address = 32'hxxxxxxxx;
-                        branch_taken = 1'b0;
-                    end
+                    branch_taken = (data_rs != data_rt);
                 2'b10: // BLEZ
-                    if(data_rs[31] || data_rs==32'b0) begin
-                        branch_address = branch_immed;
-                        branch_taken = 1'b1;
-                    end
-                    else begin
-                        branch_address = 32'hxxxxxxxx;
-                        branch_taken = 1'b0;
-                    end
+                    branch_taken = (data_rs[31] || data_rs==32'b0);
                 2'b11: // BGTZ
-                    if(data_rs[31] == 0 && data_rs) begin
-                        branch_address = branch_immed;
-                        branch_taken = 1'b1;
-                    end
-                    else begin
-                        branch_address = 32'hxxxxxxxx;
-                        branch_taken = 1'b0;
-                    end
+                    branch_taken = (data_rs[31] == 0 && data_rs);
                 default: // Make compiler happy
                     begin
-                        branch_address = 32'hxxxxxxxx;
-                        branch_taken = 1'b0;
                     end
                 endcase
             `B_LTGE:
                 unique case(instruction[16])
                 1'b0: // BLTZ
-                    if(data_rs[31] && data_rs) begin
-                        branch_address = branch_immed;
-                        branch_taken = 1'b1;
-                    end
-                    else begin
-                        branch_address = 32'hxxxxxxxx;
-                        branch_taken = 1'b0;
-                    end
+                    branch_taken = (data_rs[31] && data_rs);
                 1'b1: // BGEZ
-                    if(data_rs[31] == 0 || data_rs==32'b0) begin
-                        branch_address = branch_immed;
-                        branch_taken = 1'b1;
-                    end
-                    else begin
-                        branch_address = 32'hxxxxxxxx;
-                        branch_taken = 1'b0;
-                    end
+                    branch_taken = (data_rs[31] == 0 || data_rs==32'b0);
                 default: // Make compiler happy
                     begin
-                        branch_address = 32'hxxxxxxxx;
-                        branch_taken = 1'b0;
                     end
                 endcase
             `B_JUMP: begin
@@ -107,14 +60,10 @@ module branch(
                 branch_taken = 1'b1;
             end
             default: begin
-                branch_address = 32'hxxxxxxxx;
-                branch_taken = 1'b0;
             end
             endcase
         end
         else begin
-            branch_address = 32'hxxxxxxxx;
-            branch_taken = 1'b0;
         end
     end
 
