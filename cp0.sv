@@ -100,7 +100,7 @@ module cp0(
             // SiriusG begin
             { 5'd10, 3'd0 }:
                 rdata = EntryHi;
-            { 5'd2, 3'd0 }:
+            { 5'd1, 3'd0 }:
                 rdata = {28'd0, Random[3:0]};
             { 5'd2, 3'd0 }:
                 rdata = EntryLo0;
