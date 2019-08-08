@@ -26,7 +26,12 @@ module sirius(
         output logic [31:0]     data_wdata,
         input                   data_ok,
         input [31:0]            data_data,
-        output logic [2:0]      data_size
+        output logic [2:0]      data_size,
+
+        // Cache channel
+        output logic [31:0]     ex_daddr,
+        input                   ex_cache_hit,
+        output logic            mem_cache_hit
 );
 
     wire                if_en, if_id_en, id_ex_en, ex_mem_en, mem_wb_en;
@@ -202,6 +207,7 @@ module sirius(
     reg [4:0]       id_ex_shamt;
     reg [11:0]      id_ex_inst_exp;
     reg             id_ex_priv_inst;
+    reg [31:0]      id_ex_daddr;
 
     // SLAVE
     reg [31:0]      id_ex_pc_address_slave;
@@ -254,6 +260,7 @@ module sirius(
     reg             ex_mem_data_tlb_invalid;
     reg             ex_mem_data_dirty;
     reg             ex_mem_priv_inst;
+    reg             ex_mem_cache_hit;
 
     // SLAVE
     reg [31:0]      ex_mem_pc_address_slave;
@@ -276,6 +283,8 @@ module sirius(
     
     assign              inst_en = ~fifo_full && !(if_inst_miss || if_inst_illegal || if_inst_tlb_invalid);
     assign              data_uncached = ex_mem_data_uncached;
+    assign              ex_daddr = ex_daddr_psy;
+    assign              mem_cache_hit = ex_mem_cache_hit;
 
     logic [63:0] clk_counter;
     always_ff @(posedge clk) begin
@@ -598,6 +607,7 @@ module sirius(
             id_ex_shamt             <= 5'd0;
             id_ex_inst_exp          <= 12'd0;
             id_ex_priv_inst         <= 1'd0;
+            id_ex_daddr             <= 32'd0;
         end
         else if(id_ex_en) begin 
             id_ex_pc_address        <= if_id_pc_address;
@@ -625,6 +635,7 @@ module sirius(
             id_ex_shamt             <= id_shamt;
             id_ex_inst_exp          <= if_id_inst_exp;
             id_ex_priv_inst         <= id_priv_inst;
+            id_ex_daddr             <= rs_value + { 15'd0, id_immediate };
         end
     end
 
@@ -660,6 +671,7 @@ module sirius(
             id_ex_rt_value_slave        <= rt_value_slave;
         end
     end
+
 
     logic [31:0] ex_alu_src_a, ex_alu_src_b;
     // Get alu sources
@@ -814,6 +826,7 @@ module sirius(
             ex_mem_data_tlb_invalid     <= 1'd0;
             ex_mem_data_dirty           <= 1'd0;
             ex_mem_priv_inst            <= 1'd0;
+            ex_mem_cache_hit            <= 1'd0;
         end
         else if(ex_mem_en) begin 
             ex_mem_cp0_wen              <= ex_cop0_wen;
@@ -852,6 +865,7 @@ module sirius(
             ex_mem_data_tlb_invalid     <= ex_data_tlb_invalid;
             ex_mem_data_dirty           <= ex_data_dirty;
             ex_mem_priv_inst            <= id_ex_priv_inst;
+            ex_mem_cache_hit            <= ex_cache_hit;
         end
     end
 
@@ -887,7 +901,7 @@ module sirius(
         .inst_miss                  (pc_tlb_miss),
         .inst_illegal               (pc_tlb_illegal),
         .inst_tlb_invalid           (pc_tlb_invalid),
-        .daddr                      (ex_result),
+        .daddr                      (id_ex_daddr),
         .data_en                    (id_ex_mem_type != `MEM_NOOP),
         .daddr_psy                  (ex_daddr_psy),
         .data_uncached              (ex_data_uncached),

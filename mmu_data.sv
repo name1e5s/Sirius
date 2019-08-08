@@ -19,6 +19,11 @@ module mmu_data(
         output logic                data_ok,
         output logic [31:0]         data_data,
 
+        // Pre-detect refill request at EX stage...
+        input [31:0]                ex_daddr,
+        output logic                ex_cache_hit,
+        input                       mem_cache_hit,
+
         // From/to MMU
         output logic                mmu_running,
         // read channel
@@ -51,8 +56,7 @@ module mmu_data(
         CACHED_WWAIT    = 4'b0111,
         UNCACHED_SHAKE  = 4'b1001,
         UNCACHED_WWAIT  = 4'b1100,
-        UNCACHED_RETURN = 4'b1010,
-        CACHECTRL_WAIT  = 4'b1111
+        UNCACHED_RETURN = 4'b1010
     } cstate, nstate;
 
     enum logic [2:0] {
@@ -67,6 +71,9 @@ module mmu_data(
 
     reg  [127:0]    dcache_valid;
     reg  [127:0]    dcache_dirty;
+    reg  [18:0]     data_tag_buffer[0:127];
+    
+    assign ex_cache_hit = dcache_valid[ex_daddr[12:6]] && (data_tag_buffer[ex_daddr[12:6]] == { 3'd0 , ex_daddr[28:13]});
 
     wire [ 18:0]    data_tag    = daddr_psy[31:13];
     wire [  6:0]    data_index  = daddr_psy[12:6];
@@ -175,6 +182,16 @@ module mmu_data(
         .empty          (dfifo_empty)
     );
 
+    always_ff @(posedge clk) begin
+        if(rst) begin
+            for(int i = 0; i < 128; i++)
+                data_tag_buffer[i] <= 19'd0;
+        end
+        else if(nstate == CACHED_REFILL) begin
+            data_tag_buffer[data_index] <= data_tag;
+        end
+    end
+
     always_ff @(posedge clk) begin : update_status
         if(rst)
             cstate <= IDLE;
@@ -193,7 +210,7 @@ module mmu_data(
         if(rst) begin
             dcache_valid <= 128'd0;
         end
-        else if(cstate == CACHED_REFILL) begin
+        else if(nstate == CACHED_REFILL) begin
             dcache_valid[data_index] <= 1'b1;
         end
     end
@@ -203,7 +220,7 @@ module mmu_data(
             dcache_dirty <= 128'd0;
         end
         else if(cstate == CACHED_REFILL) begin
-            dcache_dirty[data_index] <= 1'b0;
+            dcache_dirty[data_index] <= |dwen;
         end
         else if(writeback_required) begin
             dcache_dirty[data_index] <= 1'b1;
@@ -227,7 +244,12 @@ module mmu_data(
                 receive_buffer[i] <= 32'd0;
         end
         else if(cstate == CACHED_RWAIT && ddata_rvalid) begin
-            receive_buffer[receive_counter] <= ddata_rdata;
+            if(|dwen && receive_counter == data_offset) begin
+                receive_buffer[receive_counter] <= (ddata_rdata & {{8{~dwen[3]}}, {8{~dwen[2]}}, {8{~dwen[1]}}, {8{~dwen[0]}}}) |  
+                                                (wdata  & {{8{dwen[3]}}, {8{dwen[2]}}, {8{dwen[1]}}, {8{dwen[0]}}});
+            end
+            else 
+                receive_buffer[receive_counter] <= ddata_rdata;
         end
     end
 
@@ -303,8 +325,6 @@ module mmu_data(
         end
     end
 
-    wire hit_it = (dcache_valid[data_index] && (dcache_return_tag == data_tag));
-
     // Read channel
     always_comb begin
         data_ok         = 1'd0;
@@ -364,7 +384,7 @@ module mmu_data(
                         nstate = FIFO_WAIT;
                 end
             end
-            else if(hit_it) begin
+            else if(mem_cache_hit) begin
                 cache_hit   = 1'd1;
                 if(dwen != 4'd0) begin
                     writeback_required = 1'd1;
@@ -480,7 +500,7 @@ module mmu_data(
             ram_we      = 1'd1;
             nstate      = IDLE;
 
-            data_ok     = ~(|dwen);
+            data_ok     = 1'd1;
             data_data   = receive_buffer[data_offset];
         end
         default: begin

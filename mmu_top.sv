@@ -22,6 +22,11 @@ module mmu_top(
         output logic            data_ok,
         output logic [31:0]     data_data,
 
+        // Cache channel
+        input [31:0]            ex_daddr,
+        output logic            ex_cache_hit,
+        input                   mem_cache_hit,
+
         // AXI
         //ar
         output logic [3 :0]     arid,
@@ -175,7 +180,10 @@ module mmu_top(
         .daddr_wreq_ok  (daddr_wreq_ok),
         .ddata_wready   (ddata_wready),
         .ddata_bvalid   (ddata_bvalid),
-        .mmu_running    (data_running)
+        .mmu_running    (data_running),
+        .ex_daddr       (ex_daddr),
+        .ex_cache_hit   (ex_cache_hit),
+        .mem_cache_hit  (mem_cache_hit)
     );
 
     // Read channel 
