@@ -635,7 +635,7 @@ module sirius(
             id_ex_shamt             <= id_shamt;
             id_ex_inst_exp          <= if_id_inst_exp;
             id_ex_priv_inst         <= id_priv_inst;
-            id_ex_daddr             <= rs_value + { 15'd0, id_immediate };
+            id_ex_daddr             <= rs_value + { {16{id_immediate[15]}}, id_immediate };
         end
     end
 
