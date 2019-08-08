@@ -30,23 +30,14 @@ module memory(
         output logic [31:0]         result,
         // Report error
         output logic                address_error,
-        output logic                tlb_modified,
-
-        // Cache operation
-        output logic                inst_hit_invalidate,
-        output logic                data_hit_writeback,
-        output logic                index_invalidate
+        output logic                tlb_modified
 );
 
-    assign mem_en       = (|mem_type || data_hit_writeback) && (~address_error) && 
+    assign mem_en       = (|mem_type) && (~address_error) && 
                       (~(|inst_exp)) && (~data_miss) && (~data_tlb_invalid) &&
                       ~((~data_dirty && |mem_wen));
     assign mem_addr     = address;
     assign tlb_modified = (data_dirty && |mem_wen);
-
-    assign inst_hit_invalidate = (mem_type == `MEM_CACH) && (rt_addr == 5'b00000 || rt_addr == 5'b10000);
-    assign data_hit_writeback = (mem_type == `MEM_CACH) && (rt_addr == 5'b00001 || rt_addr == 5'b10101);
-    assign index_invalidate    = (mem_type == `MEM_CACH) && (rt_addr == 5'b00000 || rt_addr == 5'b00001);
 
     always_comb begin : detect_write_size
         if(mem_size == `SZ_BYTE)

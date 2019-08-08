@@ -19,10 +19,6 @@ module mmu_data(
         output logic                data_ok,
         output logic [31:0]         data_data,
 
-        // Cache control
-        input                       data_hit_writeback,
-        input                       index_invalidate,
-
         // From/to MMU
         output logic                mmu_running,
         // read channel
@@ -88,7 +84,6 @@ module mmu_data(
     
     logic write_required;
     logic writeback_required;
-    logic valid_change;
 
     wire [18:0]dcache_return_tag  = dcache_return[18:0];
     assign dcache_return_data[0]  = dcache_return[50:19];
@@ -201,15 +196,13 @@ module mmu_data(
         else if(cstate == CACHED_REFILL) begin
             dcache_valid[data_index] <= 1'b1;
         end
-        else if(valid_change)
-            dcache_valid[data_index] <= 1'b0;
     end
 
     always_ff @(posedge clk) begin : update_dirty_info
         if(rst) begin
             dcache_dirty <= 128'd0;
         end
-        else if(cstate == CACHED_REFILL || valid_change) begin
+        else if(cstate == CACHED_REFILL) begin
             dcache_dirty[data_index] <= 1'b0;
         end
         else if(writeback_required) begin
@@ -310,7 +303,7 @@ module mmu_data(
         end
     end
 
-    wire hit_it = (dcache_valid[data_index] && (dcache_return_tag == data_tag || index_invalidate));
+    wire hit_it = (dcache_valid[data_index] && (dcache_return_tag == data_tag));
 
     // Read channel
     always_comb begin
@@ -335,7 +328,6 @@ module mmu_data(
         uncached_write = 1'd0;
 
         dfifo_write_en = 1'd0;
-        valid_change = 1'd0;
 
 
         for(int i = 0; i < 16; i++) begin
@@ -346,15 +338,6 @@ module mmu_data(
         IDLE: begin
             if(rst || !den) begin
                 // Make vivado happy
-            end
-            else if(data_hit_writeback) begin
-                if(hit_it && dcache_dirty[data_index] && ~(dfifo_empty && wcstate == WIDLE))
-                    nstate = FIFO_WAIT;
-                valid_change = hit_it;
-                write_required = hit_it && dcache_dirty[data_index];
-                data_ok = ~hit_it;
-                if(hit_it)
-                    nstate = CACHECTRL_WAIT;
             end
             else if(daddr_type) begin // Uncached access
                 mmu_running = 1'd1;
@@ -418,15 +401,6 @@ module mmu_data(
                 end
 
             end
-        end
-
-        CACHECTRL_WAIT: begin
-            if(dfifo_empty && (wcstate == WIDLE)) begin
-                nstate = IDLE;
-                data_ok = 1'd1;
-            end
-            else
-                nstate = CACHECTRL_WAIT;
         end
 
         FIFO_WAIT: begin

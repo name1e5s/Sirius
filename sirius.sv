@@ -26,12 +26,7 @@ module sirius(
         output logic [31:0]     data_wdata,
         input                   data_ok,
         input [31:0]            data_data,
-        output logic [2:0]      data_size,
-
-        // Cache control channel
-        output logic            inst_hit_invalidate,
-        output logic            data_hit_writeback,
-        output logic            index_invalidate
+        output logic [2:0]      data_size
 );
 
     wire                if_en, if_id_en, id_ex_en, ex_mem_en, mem_wb_en;
@@ -933,16 +928,10 @@ module sirius(
         .data_illegal               (ex_mem_data_illegal),
         .data_tlb_invalid           (ex_mem_data_tlb_invalid),
         .data_dirty                 (ex_mem_data_dirty),
-        .inst_exp                   (ex_mem_inst_exp[2:0]),
-        .inst_hit_invalidate        (mem_inst_hit_invalidate),
-		.data_hit_writeback	        (mem_data_hit_writeback),
-		.index_invalidate	        (mem_index_invalidate)
+        .inst_exp                   (ex_mem_inst_exp[2:0])
     );
 
     wire exp_detect_salve;
-    assign inst_hit_invalidate = mem_inst_hit_invalidate && ~exp_detect;
-    assign data_hit_writeback = mem_data_hit_writeback && ~exp_detect;
-    assign index_invalidate = mem_index_invalidate && ~exp_detect;
 
     exception_alpha exception(
         .clk                        (clk),

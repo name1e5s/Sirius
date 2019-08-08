@@ -53,7 +53,6 @@ module mycpu_top(
    wire [ 3:0]	dwen;
    wire [31:0]  iaddr_i, idata_i, idata2_i, daddr_i, drdata_i, dwdata_i;
    wire inst_uncached, data_uncached;
-   wire inst_hit_invalidate, data_hit_writeback, index_invalidate;
    wire [2:0] data_size;
    mmu_top mmu_0(
 			.clk                (aclk),
@@ -76,9 +75,6 @@ module mycpu_top(
 
 			.inst_uncached		(inst_uncached),
 			.data_uncached		(data_uncached),
-			.inst_hit_invalidate(inst_hit_invalidate),
-			.data_hit_writeback	(data_hit_writeback),
-			.index_invalidate	(index_invalidate),
 
 			.arid               (arid),
 			.araddr             (araddr),
@@ -139,11 +135,7 @@ module mycpu_top(
 			  .data_size 		  (data_size),
 
 			  .inst_uncached		(inst_uncached),
-			  .data_uncached		(data_uncached),
-
-			.inst_hit_invalidate(inst_hit_invalidate),
-			.data_hit_writeback	(data_hit_writeback),
-			.index_invalidate	(index_invalidate)
+			  .data_uncached		(data_uncached)
 	      );
    
 endmodule
