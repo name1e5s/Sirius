@@ -279,7 +279,7 @@ module sirius(
     reg [ 4:0]      mem_wb_reg_dest_slave;
     reg             mem_wb_reg_en_slave;
     
-    assign              inst_en = ~fifo_full;
+    assign              inst_en = ~fifo_full && !(if_inst_miss || if_inst_illegal || if_inst_tlb_invalid);
     assign              data_uncached = ex_mem_data_uncached;
 
     logic [63:0] clk_counter;
@@ -334,6 +334,13 @@ module sirius(
         .wdata2_a               (wb_reg_write_data_slave)
     );
 
+    wire [31:0] if_pc_address_next;
+    wire [31:0] pc_address_psy_next;
+    wire        pc_tlb_miss;
+    wire        pc_tlb_illegal;
+    wire        pc_tlb_invalid;
+    wire        pc_tlb_uncached;
+
     pc pc_0(
         .clk                    (clk),
         .rst                    (rst),
@@ -345,7 +352,18 @@ module sirius(
         .branch_address         (ex_branch_address),
         .exception_taken        (mem_exception_taken),
         .exception_address      (mem_exception_address),
-        .pc_address             (if_pc_address)
+        .pc_address_next        (if_pc_address_next),
+        .pc_address_psy_next    (pc_address_psy_next),
+        .pc_tlb_miss            (pc_tlb_miss),
+        .pc_tlb_illegal         (pc_tlb_illegal),
+        .pc_tlb_invalid         (pc_tlb_invalid),
+        .pc_tlb_uncached        (pc_tlb_uncached),
+        .pc_address             (if_pc_address),
+        .pc_address_psy         (inst_addr),
+        .tlb_miss               (if_inst_miss),
+        .tlb_illegal            (if_inst_illegal),
+        .tlb_invalid            (if_inst_tlb_invalid),
+        .tlb_uncached           (inst_uncached)
     );
 
     instruction_fifo instruction_fifo_0(
@@ -356,8 +374,8 @@ module sirius(
         .master_is_branch       (id_is_branch_instr),
         .read_en1               (if_id_en),
         .read_en2               (id_enable_slave),
-        .write_en1              (inst_ok & inst_ok_1),
-        .write_en2              (inst_ok & inst_ok_2),
+        .write_en1              (inst_ok & inst_ok_1 || (if_inst_miss || if_inst_illegal || if_inst_tlb_invalid)),
+        .write_en2              (inst_ok & inst_ok_2 || (if_inst_miss || if_inst_illegal || if_inst_tlb_invalid)),
         .write_data1            (inst_data_1),
         .write_address1         (if_pc_address),
         .write_data2            (inst_data_2),
@@ -867,13 +885,13 @@ module sirius(
         .tlbwi                      (ex_mem_tlbwi),
         .tlbwr                      (ex_mem_tlbwr),
         .tlbp                       (ex_mem_tlbp),
-        .iaddr                      (if_pc_address),
-        .inst_en                    (~fifo_full),
-        .iaddr_psy                  (inst_addr),
-        .inst_uncached              (inst_uncached),
-        .inst_miss                  (if_inst_miss),
-        .inst_illegal               (if_inst_illegal),
-        .inst_tlb_invalid           (if_inst_tlb_invalid),
+        .iaddr                      (if_pc_address_next),
+        .inst_en                    (1'd1),
+        .iaddr_psy                  (pc_address_psy_next),
+        .inst_uncached              (pc_tlb_uncached),
+        .inst_miss                  (pc_tlb_miss),
+        .inst_illegal               (pc_tlb_illegal),
+        .inst_tlb_invalid           (pc_tlb_invalid),
         .daddr                      (ex_result),
         .data_en                    (id_ex_mem_type != `MEM_NOOP),
         .daddr_psy                  (ex_daddr_psy),

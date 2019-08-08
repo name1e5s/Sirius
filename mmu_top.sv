@@ -93,7 +93,7 @@ module mmu_top(
 
     always_comb begin
         iaddr_psy   = inst_addr;
-        iaddr_type  = inst_uncached;
+        iaddr_type  = 1'd0;
         daddr_psy   = data_addr;
         daddr_type  = data_uncached;
     end

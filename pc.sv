@@ -13,13 +13,33 @@ module pc(
         input                   exception_taken,
         input [31:0]            exception_address,
 
-        output logic [31:0]     pc_address
+        output logic [31:0]     pc_address_next,
+        input  [31:0]           pc_address_psy_next,
+        input                   pc_tlb_miss,
+        input                   pc_tlb_illegal,
+        input                   pc_tlb_invalid,
+        input                   pc_tlb_uncached,
+
+        output logic [31:0]     pc_address,
+        output logic [31:0]     pc_address_psy,
+        output logic            tlb_miss,
+        output logic            tlb_illegal,
+        output logic            tlb_invalid,
+        output logic            tlb_uncached
 );
 
     reg     [31:0] real_pc_address;
-    logic   [31:0] pc_address_next;
+    // logic   [31:0] pc_address_next;
     
     assign pc_address = real_pc_address;
+
+    always_ff @(posedge clk) begin
+        pc_address_psy  <= pc_address_psy_next;
+        tlb_miss        <= pc_tlb_miss;
+        tlb_illegal     <= pc_tlb_illegal;
+        tlb_invalid     <= pc_tlb_invalid;
+        tlb_uncached    <= pc_tlb_uncached;
+    end
 
     always_comb begin : compute_next_pc_address
         if(rst)
