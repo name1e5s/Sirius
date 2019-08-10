@@ -209,6 +209,8 @@ module sirius(
     reg [11:0]      id_ex_inst_exp;
     reg             id_ex_priv_inst;
     reg [31:0]      id_ex_daddr;
+    reg [31:0]      id_ex_branch_immed;
+    reg [31:0]      id_ex_pc_next;
 
     // SLAVE
     reg [31:0]      id_ex_pc_address_slave;
@@ -639,6 +641,7 @@ module sirius(
             id_ex_inst_exp          <= 12'd0;
             id_ex_priv_inst         <= 1'd0;
             id_ex_daddr             <= 32'd0;
+            id_ex_branch_immed      <= 32'd0;
         end
         else if(id_ex_en) begin 
             id_ex_pc_address        <= if_id_pc_address;
@@ -667,6 +670,8 @@ module sirius(
             id_ex_inst_exp          <= if_id_inst_exp;
             id_ex_priv_inst         <= id_priv_inst;
             id_ex_daddr             <= rs_value + { {16{id_immediate[15]}}, id_immediate };
+            id_ex_branch_immed      <= if_id_pc_address + 32'd4 + {{14{if_id_instruction[15]}}, if_id_instruction[15:0], 2'b00};
+            id_ex_pc_next           <= if_id_pc_address + 32'd4;
         end
     end
 
@@ -754,6 +759,8 @@ module sirius(
     branch branch_unit(
         .en                 (1'd1),
         .pc_address         (id_ex_pc_address),
+        .branch_immed       (id_ex_branch_immed),
+        .next_pc            (id_ex_pc_next),
         .instruction        (id_ex_instruction),
         .is_branch_instr    (id_ex_is_branch),
         .branch_type        (id_ex_branch_type),

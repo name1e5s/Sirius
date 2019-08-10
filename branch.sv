@@ -10,10 +10,13 @@ module branch(
         input [31:0]                data_rs,
         input [31:0]                data_rt,
 
+        input [31:0]                branch_immed,
+        input [31:0]                next_pc,
+
         output logic                branch_taken,
         output logic [31:0]         branch_address
 );
-
+/*
    reg [31:0] next_pc;
    reg [31:0] branch_immed;
 
@@ -21,7 +24,7 @@ module branch(
         next_pc = pc_address + 32'd4;
         branch_immed = pc_address + 32'd4 + {{14{instruction[15]}}, instruction[15:0], 2'b00};
     end
-
+*/
     always_comb begin : take_branch
         branch_address = branch_immed;
         branch_taken = 1'b0;
