@@ -8,6 +8,8 @@ module pc(
         input                   inst_ok_2,
         input                   fifo_full,
 
+        input                   branch_en,
+
         input                   branch_taken,
         input [31:0]            branch_address,
         input                   exception_taken,
@@ -81,7 +83,7 @@ module pc(
                 pc_tlb_invalid_next = 1'd0;
                 pc_tlb_uncached_next= exception_address[29];
             end
-            else if(branch_taken) begin
+            else if(branch_en && branch_taken) begin
                 pc_address_next     = branch_address;
                 pc_address_psy_next = pc_address_psy_next_bran;
                 pc_tlb_miss_next    = pc_tlb_miss_bran;

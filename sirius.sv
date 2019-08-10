@@ -96,7 +96,8 @@ module sirius(
 
     wire                id_enable_slave;
     // EX SIGNALS
-    wire                ex_branch_taken;
+    wire                ex_internal_branch_taken;
+    wire                ex_branch_taken = ex_internal_branch_taken && id_ex_en;
     wire [31:0]         ex_branch_address;
     wire [7:0]          ex_cop0_addr;
     wire                ex_cop0_wen;
@@ -366,7 +367,8 @@ module sirius(
         .fifo_full              (fifo_full),
         .inst_ok_1              (inst_ok_1),
         .inst_ok_2              (inst_ok_2),
-        .branch_taken           (ex_branch_taken),
+        .branch_en              (id_ex_en),
+        .branch_taken           (ex_internal_branch_taken),
         .branch_address         (ex_branch_address),
         .exception_taken        (mem_exception_taken),
         .exception_address      (mem_exception_address),
@@ -750,14 +752,14 @@ module sirius(
     end
 
     branch branch_unit(
-        .en                 (id_ex_en),
+        .en                 (1'd1),
         .pc_address         (id_ex_pc_address),
         .instruction        (id_ex_instruction),
         .is_branch_instr    (id_ex_is_branch),
         .branch_type        (id_ex_branch_type),
         .data_rs            (id_ex_rs_value),
         .data_rt            (id_ex_rt_value),
-        .branch_taken       (ex_branch_taken),
+        .branch_taken       (ex_internal_branch_taken),
         .branch_address     (ex_branch_address)
     );
 
