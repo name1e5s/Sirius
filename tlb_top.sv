@@ -12,8 +12,19 @@ module tlb_top(
     output logic [31:0]         paddr_inst,
     output logic                miss_inst,
     output logic                valid_inst,
-    output logic                dirty_inst,
     output logic                uncached_inst,
+
+    input [31:0]                vaddr_inst_1,
+    output logic [31:0]         paddr_inst_1,
+    output logic                miss_inst_1,
+    output logic                valid_inst_1,
+    output logic                uncached_inst_1,
+
+    input [31:0]                vaddr_inst_2,
+    output logic [31:0]         paddr_inst_2,
+    output logic                miss_inst_2,
+    output logic                valid_inst_2,
+    output logic                uncached_inst_2,
 
     input [31:0]                vaddr_data,
     output logic [31:0]         paddr_data,
@@ -42,12 +53,43 @@ module tlb_top(
         .paddr              (paddr_inst),
         .miss               (miss_inst),
         .valid              (valid_inst),
-        .dirty              (dirty_inst),
         .uncached           (uncached_inst),
         .cp0_index          (cp0_index), 
         .cp0_random         (cp0_random),
         .cp0_tlb_conf_in    (cp0_tlb_conf_in),
         .cp0_tlb_conf_out   (cp0_tlb_conf_out)
+    );
+
+    tlb_common tlb_inst_1(
+        .clk                (clk),
+        .rst                (rst),
+        .tlbwi              (tlbwi),
+        .tlbwr              (tlbwr),
+        .curr_ASID          (curr_ASID),
+        .vaddr              (vaddr_inst_1),
+        .paddr              (paddr_inst_1),
+        .miss               (miss_inst_1),
+        .valid              (valid_inst_1),
+        .uncached           (uncached_inst_1),
+        .cp0_index          (cp0_index), 
+        .cp0_random         (cp0_random),
+        .cp0_tlb_conf_in    (cp0_tlb_conf_in)
+    );
+
+    tlb_common tlb_inst_2(
+        .clk                (clk),
+        .rst                (rst),
+        .tlbwi              (tlbwi),
+        .tlbwr              (tlbwr),
+        .curr_ASID          (curr_ASID),
+        .vaddr              (vaddr_inst_2),
+        .paddr              (paddr_inst_2),
+        .miss               (miss_inst_2),
+        .valid              (valid_inst_2),
+        .uncached           (uncached_inst_2),
+        .cp0_index          (cp0_index), 
+        .cp0_random         (cp0_random),
+        .cp0_tlb_conf_in    (cp0_tlb_conf_in)
     );
 
     tlb_common tlb_data(

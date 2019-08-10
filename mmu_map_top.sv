@@ -14,6 +14,22 @@ module mmu_map_top(
     output logic                inst_illegal,
     output logic                inst_tlb_invalid,
 
+    input [31:0]                iaddr_1,
+    input                       inst_en_1,
+    output logic [31:0]         iaddr_psy_1,
+    output logic                inst_uncached_1,
+    output logic                inst_miss_1,
+    output logic                inst_illegal_1,
+    output logic                inst_tlb_invalid_1,
+
+    input [31:0]                iaddr_2,
+    input                       inst_en_2,
+    output logic [31:0]         iaddr_psy_2,
+    output logic                inst_uncached_2,
+    output logic                inst_miss_2,
+    output logic                inst_illegal_2,
+    output logic                inst_tlb_invalid_2,
+
     input [31:0]                daddr,
     input                       data_en,
     output logic [31:0]         daddr_psy,
@@ -38,30 +54,51 @@ module mmu_map_top(
 
 
     wire [31:0] ipaddr_direct;
+    wire [31:0] ipaddr_direct_1;
+    wire [31:0] ipaddr_direct_2;
     wire [31:0] dpaddr_direct;
     wire [31:0] ipaddr_tlb;
+    wire [31:0] ipaddr_tlb_1;
+    wire [31:0] ipaddr_tlb_2;
     wire [31:0] dpaddr_tlb;
 
     wire iaddr_uncached_direct;
+    wire iaddr_uncached_direct_1;
+    wire iaddr_uncached_direct_2;
     wire daddr_uncached_direct;
 
     wire iaddr_in_tlb;
+    wire iaddr_in_tlb_1;
+    wire iaddr_in_tlb_2;
     wire daddr_in_tlb;
 
     logic                miss_inst;
     logic                valid_inst;
-    logic                dirty_inst;
     logic                uncached_inst;
+    logic                miss_inst_1;
+    logic                valid_inst_1;
+    logic                uncached_inst_1;
+    logic                miss_inst_2;
+    logic                valid_inst_2;
+    logic                uncached_inst_2;
 
     logic                miss_data;
     logic                valid_data;
     logic                dirty_data;
     logic                uncached_data;
 
-    assign iaddr_psy        = iaddr_in_tlb ? ipaddr_tlb : ipaddr_direct;
-    assign inst_uncached    = iaddr_in_tlb ? uncached_inst : iaddr_uncached_direct;
-    assign inst_miss        = iaddr_in_tlb && miss_inst;
-    assign inst_tlb_invalid = iaddr_in_tlb && ~valid_inst;
+    assign iaddr_psy            = iaddr_in_tlb ? ipaddr_tlb : ipaddr_direct;
+    assign inst_uncached        = iaddr_in_tlb ? uncached_inst : iaddr_uncached_direct;
+    assign inst_miss            = iaddr_in_tlb && miss_inst;
+    assign inst_tlb_invalid     = iaddr_in_tlb && ~valid_inst;
+    assign iaddr_psy_1          = iaddr_in_tlb_1 ? ipaddr_tlb_1 : ipaddr_direct_1;
+    assign inst_uncached_1      = iaddr_in_tlb_1 ? uncached_inst_1 : iaddr_uncached_direct_1;
+    assign inst_miss_1          = iaddr_in_tlb_1 && miss_inst_1;
+    assign inst_tlb_invalid_1   = iaddr_in_tlb_1 && ~valid_inst_1;
+    assign iaddr_psy_2          = iaddr_in_tlb_2 ? ipaddr_tlb_2 : ipaddr_direct_2;
+    assign inst_uncached_2      = iaddr_in_tlb_2 ? uncached_inst_2 : iaddr_uncached_direct_2;
+    assign inst_miss_2          = iaddr_in_tlb_2 && miss_inst_2;
+    assign inst_tlb_invalid_2   = iaddr_in_tlb_2 && ~valid_inst_2;
 
     assign daddr_psy        = daddr_in_tlb ? dpaddr_tlb : dpaddr_direct;
     assign data_uncached    = daddr_in_tlb ? uncached_data : daddr_uncached_direct;
@@ -80,6 +117,32 @@ module mmu_map_top(
         .addr_invalid           (inst_illegal),
         .addr_uncached          (iaddr_uncached_direct),
         .addr_in_tlb            (iaddr_in_tlb)
+    );
+
+    mmu_map mmu_map_inst_1(
+        .clk                    (clk),
+        .rst                    (rst),
+        .en                     (inst_en_1),
+        .vaddr                  (iaddr_1),
+        .user_mode              (user_mode),
+        .cp0_kseg0_uncached     (cp0_kseg0_uncached),
+        .paddr                  (ipaddr_direct_1),
+        .addr_invalid           (inst_illegal_1),
+        .addr_uncached          (iaddr_uncached_direct_1),
+        .addr_in_tlb            (iaddr_in_tlb_1)
+    );
+
+    mmu_map mmu_map_inst_2(
+        .clk                    (clk),
+        .rst                    (rst),
+        .en                     (inst_en_2),
+        .vaddr                  (iaddr_2),
+        .user_mode              (user_mode),
+        .cp0_kseg0_uncached     (cp0_kseg0_uncached),
+        .paddr                  (ipaddr_direct_2),
+        .addr_invalid           (inst_illegal_2),
+        .addr_uncached          (iaddr_uncached_direct_2),
+        .addr_in_tlb            (iaddr_in_tlb_2)
     );
 
     mmu_map mmu_map_data(
@@ -106,8 +169,17 @@ module mmu_map_top(
         .paddr_inst             (ipaddr_tlb),
         .miss_inst              (miss_inst),
         .valid_inst             (valid_inst),
-        .dirty_inst             (dirty_inst),
         .uncached_inst          (uncached_inst),
+        .vaddr_inst_1           (iaddr_1),
+        .paddr_inst_1           (ipaddr_tlb_1),
+        .miss_inst_1            (miss_inst_1),
+        .valid_inst_1           (valid_inst_1),
+        .uncached_inst_1        (uncached_inst_1),
+        .vaddr_inst_2           (iaddr_2),
+        .paddr_inst_2           (ipaddr_tlb_2),
+        .miss_inst_2            (miss_inst_2),
+        .valid_inst_2           (valid_inst_2),
+        .uncached_inst_2        (uncached_inst_2),
         .vaddr_data             (daddr),
         .paddr_data             (dpaddr_tlb),
         .miss_data              (miss_data),

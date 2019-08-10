@@ -338,12 +338,26 @@ module sirius(
         .wdata2_a               (wb_reg_write_data_slave)
     );
 
-    wire [31:0] if_pc_address_next;
-    wire [31:0] pc_address_psy_next;
-    wire        pc_tlb_miss;
-    wire        pc_tlb_illegal;
-    wire        pc_tlb_invalid;
-    wire        pc_tlb_uncached;
+    wire [31:0] if_pc_address_next_bran;
+    wire [31:0] pc_address_psy_next_bran;
+    wire        pc_tlb_miss_bran;
+    wire        pc_tlb_illegal_bran;
+    wire        pc_tlb_invalid_bran;
+    wire        pc_tlb_uncached_bran;
+
+    wire [31:0] if_pc_address_next_seq0;
+    wire [31:0] pc_address_psy_next_seq0;
+    wire        pc_tlb_miss_seq0;
+    wire        pc_tlb_illegal_seq0;
+    wire        pc_tlb_invalid_seq0;
+    wire        pc_tlb_uncached_seq0;
+
+    wire [31:0] if_pc_address_next_seq1;
+    wire [31:0] pc_address_psy_next_seq1;
+    wire        pc_tlb_miss_seq1;
+    wire        pc_tlb_illegal_seq1;
+    wire        pc_tlb_invalid_seq1;
+    wire        pc_tlb_uncached_seq1;
 
     pc pc_0(
         .clk                    (clk),
@@ -356,12 +370,27 @@ module sirius(
         .branch_address         (ex_branch_address),
         .exception_taken        (mem_exception_taken),
         .exception_address      (mem_exception_address),
-        .pc_address_next        (if_pc_address_next),
-        .pc_address_psy_next    (pc_address_psy_next),
-        .pc_tlb_miss            (pc_tlb_miss),
-        .pc_tlb_illegal         (pc_tlb_illegal),
-        .pc_tlb_invalid         (pc_tlb_invalid),
-        .pc_tlb_uncached        (pc_tlb_uncached),
+        .pc_address_next_bran   (if_pc_address_next_bran),
+        .pc_address_psy_next_bran(pc_address_psy_next_bran),
+        .pc_tlb_miss_bran       (pc_tlb_miss_bran),
+        .pc_tlb_illegal_bran    (pc_tlb_illegal_bran),
+        .pc_tlb_invalid_bran    (pc_tlb_invalid_bran),
+        .pc_tlb_uncached_bran   (pc_tlb_uncached_bran),
+
+        .pc_address_next_seq0   (if_pc_address_next_seq0),
+        .pc_address_psy_next_seq0(pc_address_psy_next_seq0),
+        .pc_tlb_miss_seq0       (pc_tlb_miss_seq0),
+        .pc_tlb_illegal_seq0    (pc_tlb_illegal_seq0),
+        .pc_tlb_invalid_seq0    (pc_tlb_invalid_seq0),
+        .pc_tlb_uncached_seq0   (pc_tlb_uncached_seq0),
+
+        .pc_address_next_seq1   (if_pc_address_next_seq1),
+        .pc_address_psy_next_seq1(pc_address_psy_next_seq1),
+        .pc_tlb_miss_seq1       (pc_tlb_miss_seq1),
+        .pc_tlb_illegal_seq1    (pc_tlb_illegal_seq1),
+        .pc_tlb_invalid_seq1    (pc_tlb_invalid_seq1),
+        .pc_tlb_uncached_seq1   (pc_tlb_uncached_seq1),
+
         .pc_address             (if_pc_address),
         .pc_address_psy         (inst_addr),
         .tlb_miss               (if_inst_miss),
@@ -894,13 +923,30 @@ module sirius(
         .tlbwi                      (ex_mem_tlbwi),
         .tlbwr                      (ex_mem_tlbwr),
         .tlbp                       (ex_mem_tlbp),
-        .iaddr                      (if_pc_address_next),
+        .iaddr                      (if_pc_address_next_bran),
         .inst_en                    (1'd1),
-        .iaddr_psy                  (pc_address_psy_next),
-        .inst_uncached              (pc_tlb_uncached),
-        .inst_miss                  (pc_tlb_miss),
-        .inst_illegal               (pc_tlb_illegal),
-        .inst_tlb_invalid           (pc_tlb_invalid),
+        .iaddr_psy                  (pc_address_psy_next_bran),
+        .inst_uncached              (pc_tlb_uncached_bran),
+        .inst_miss                  (pc_tlb_miss_bran),
+        .inst_illegal               (pc_tlb_illegal_bran),
+        .inst_tlb_invalid           (pc_tlb_invalid_bran),
+
+        .iaddr_1                    (if_pc_address_next_seq0),
+        .inst_en_1                  (1'd1),
+        .iaddr_psy_1                (pc_address_psy_next_seq0),
+        .inst_uncached_1            (pc_tlb_uncached_seq0),
+        .inst_miss_1                (pc_tlb_miss_seq0),
+        .inst_illegal_1             (pc_tlb_illegal_seq0),
+        .inst_tlb_invalid_1         (pc_tlb_invalid_seq0),
+
+        .iaddr_2                    (if_pc_address_next_seq1),
+        .inst_en_2                  (1'd1),
+        .iaddr_psy_2                (pc_address_psy_next_seq1),
+        .inst_uncached_2            (pc_tlb_uncached_seq1),
+        .inst_miss_2                (pc_tlb_miss_seq1),
+        .inst_illegal_2             (pc_tlb_illegal_seq1),
+        .inst_tlb_invalid_2         (pc_tlb_invalid_seq1),
+
         .daddr                      (id_ex_daddr),
         .data_en                    (id_ex_mem_type != `MEM_NOOP),
         .daddr_psy                  (ex_daddr_psy),
