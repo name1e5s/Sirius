@@ -34,8 +34,8 @@ module cp0(
         output logic                user_mode,
         output logic                cp0_kseg0_uncached,
         output logic [7:0]          curr_ASID,
-        output logic [3:0]          cp0_index,
-        output logic [3:0]          cp0_random,
+        output logic [2:0]          cp0_index,
+        output logic [2:0]          cp0_random,
         output logic [85:0]         cp0_tlb_conf_out,
         input [85:0]                cp0_tlb_conf_in,
 
@@ -73,8 +73,8 @@ module cp0(
     assign allow_interrupt   = Status[2:0] == 3'b001;
     assign interrupt_flag    = Status[15:8] & Cause[15:8];
     assign curr_ASID         = EntryHi[7:0];
-    assign cp0_index         = Index[3:0];
-    assign cp0_random        = {28'd0, Random[3:0]};
+    assign cp0_index         = Index[2:0];
+    assign cp0_random        = {29'd0, Random[2:0]};
     assign user_mode = Status[4:1]==4'b1000;
     assign cp0_kseg0_uncached = Config[2:0] == 3'd2;
     assign cp0_tlb_conf_out = { EntryHi[31:13], EntryLo0[0] && EntryLo1[0], EntryHi[7:0], EntryLo0[29:1], EntryLo1[29:1]};
@@ -101,7 +101,7 @@ module cp0(
             { 5'd10, 3'd0 }:
                 rdata = EntryHi;
             { 5'd1, 3'd0 }:
-                rdata = {28'd0, Random[3:0]};
+                rdata = {29'd0, Random[2:0]};
             { 5'd2, 3'd0 }:
                 rdata = EntryLo0;
             { 5'd3, 3'd0 }:
@@ -180,7 +180,7 @@ module cp0(
                     { 5'd3 , 3'd0 }:
                         EntryLo1[29:0]  <= wdata[29:0];
                     { 5'd0, 5'd0 }:
-                        Index[3:0]      <= wdata[3:0]; // Only 16 entries here...
+                        Index[2:0]      <= wdata[2:0]; // Only 8 entries here...
                     { 5'd4, 3'd0 }:
                         Context[31:13]  <= wdata[31:13];
                     { 5'd11, 3'd0 }: begin
@@ -191,7 +191,7 @@ module cp0(
                         Config[2:0]     <= wdata[2:0];
                     end
                     { 5'd6, 3'd0 }: begin
-                        Wired[3:0]      <= wdata[3:0];
+                        Wired[2:0]      <= wdata[2:0];
                     end
                     { 5'd15, 3'd1 }: begin
                         EBase[29:12]    <= wdata[29:12];

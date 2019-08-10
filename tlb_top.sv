@@ -34,11 +34,11 @@ module tlb_top(
     output logic                uncached_data,
 
     output logic                miss_probe,
-    output logic [3:0]          matched_index_probe,
+    output logic [2:0]          matched_index_probe,
 
     // Connects to CP0
-    input [3:0]                 cp0_index,
-    input [3:0]                 cp0_random,
+    input [2:0]                 cp0_index,
+    input [2:0]                 cp0_random,
     input [85:0]                cp0_tlb_conf_in,
     output logic [85:0]         cp0_tlb_conf_out
 );
