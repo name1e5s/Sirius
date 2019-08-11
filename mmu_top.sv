@@ -186,6 +186,13 @@ module mmu_top(
         .mem_cache_hit  (mem_cache_hit)
     );
 
+    assign ddata_rdata     = rdata;
+    assign ddata_rvalid    = rvalid;
+    assign ddata_rlast     = rlast;
+    assign idata_rdata     = rdata;
+    assign idata_rvalid    = rvalid;
+    assign idata_rlast     = rlast;
+
     // Read channel 
     always_comb begin
         if((iread_en && inst_running && dread_en && data_running) || (data_running && ~dread_en && inst_running) || (data_running && ~inst_running)) begin // Data first
@@ -194,13 +201,7 @@ module mmu_top(
             arburst         = dread_type ? 2'd0 : 2'd1;
             arvalid         = dread_en;
             daddr_req_ok    = arready;
-            ddata_rdata     = rdata;
-            ddata_rvalid    = rvalid;
-            ddata_rlast     = rlast;
             iaddr_req_ok    = 1'd0;
-            idata_rdata     = 32'd0;
-            idata_rvalid    = 1'd0;
-            idata_rlast     = 1'd0;
             arsize          = dread_type ? data_size : 3'b010;
         end
         else begin
@@ -210,13 +211,7 @@ module mmu_top(
             arsize          = 3'b010;
             arvalid         = iread_en;
             iaddr_req_ok    = arready;
-            idata_rdata     = rdata;
-            idata_rvalid    = rvalid;
-            idata_rlast     = rlast;
             daddr_req_ok    = 1'd0;
-            ddata_rdata     = 32'd0;
-            ddata_rvalid    = 1'd0;
-            ddata_rlast     = 1'd0;
         end
     end
 

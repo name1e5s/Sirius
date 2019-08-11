@@ -170,6 +170,7 @@ module memory(
                                 {{24{mem_rdata[7]}}, mem_rdata[7:0]};
                     endcase
                 end
+                /*
                 `SZ_LEFT: begin
                     unique case(address[1:0])
                     2'b00:
@@ -194,6 +195,7 @@ module memory(
                         result = {rt_value[31:8],mem_rdata[31:24]};
                     endcase
                 end
+                */
                 default:
                     result = mem_rdata;
                 endcase

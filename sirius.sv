@@ -211,6 +211,7 @@ module sirius(
     reg [31:0]      id_ex_daddr;
     reg [31:0]      id_ex_branch_immed;
     reg [31:0]      id_ex_pc_next;
+    reg [31:0]      id_ex_pc_link;
 
     // SLAVE
     reg [31:0]      id_ex_pc_address_slave;
@@ -642,6 +643,7 @@ module sirius(
             id_ex_priv_inst         <= 1'd0;
             id_ex_daddr             <= 32'd0;
             id_ex_branch_immed      <= 32'd0;
+            id_ex_pc_link           <= 32'd0;
         end
         else if(id_ex_en) begin 
             id_ex_pc_address        <= if_id_pc_address;
@@ -672,6 +674,7 @@ module sirius(
             id_ex_daddr             <= rs_value + { {16{id_immediate[15]}}, id_immediate };
             id_ex_branch_immed      <= if_id_pc_address + 32'd4 + {{14{if_id_instruction[15]}}, if_id_instruction[15:0], 2'b00};
             id_ex_pc_next           <= if_id_pc_address + 32'd4;
+            id_ex_pc_link           <= if_id_pc_address + 32'd8;
         end
     end
 
@@ -715,7 +718,7 @@ module sirius(
         if(id_ex_alu_src == `SRC_SFT)
             ex_alu_src_a = { 27'd0 ,id_ex_shamt};
         else if(id_ex_alu_src == `SRC_PCA)
-            ex_alu_src_a = id_ex_pc_address + 32'd8;
+            ex_alu_src_a = id_ex_pc_link;
         else
             ex_alu_src_a = id_ex_rs_value;
     end
