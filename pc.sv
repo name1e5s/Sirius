@@ -36,6 +36,12 @@ module pc(
         input                   pc_tlb_invalid_seq1,
         input                   pc_tlb_uncached_seq1,
 
+        input  [31:0]           pc_address_psy_next_seq2,
+        input                   pc_tlb_miss_seq2,
+        input                   pc_tlb_illegal_seq2,
+        input                   pc_tlb_invalid_seq2,
+        input                   pc_tlb_uncached_seq2,
+
         output logic [31:0]     pc_address,
         output logic [31:0]     pc_address_psy,
         output logic            tlb_miss,
@@ -77,11 +83,11 @@ module pc(
         else if(pc_en) begin
             if(exception_taken) begin
                 pc_address_next     = exception_address;
-                pc_address_psy_next = { 3'd0, exception_address[28:0] };
-                pc_tlb_miss_next    = 1'd0;
-                pc_tlb_illegal_next = 1'd0;
-                pc_tlb_invalid_next = 1'd0;
-                pc_tlb_uncached_next= exception_address[29];
+                pc_address_psy_next = pc_address_psy_next_seq2;
+                pc_tlb_miss_next    = pc_tlb_miss_seq2;
+                pc_tlb_illegal_next = pc_tlb_illegal_seq2;
+                pc_tlb_invalid_next = pc_tlb_invalid_seq2;
+                pc_tlb_uncached_next= pc_tlb_uncached_seq2;
             end
             else if(branch_en && branch_taken) begin
                 pc_address_next     = branch_address;

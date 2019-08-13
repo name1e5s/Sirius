@@ -26,6 +26,12 @@ module tlb_top(
     output logic                valid_inst_2,
     output logic                uncached_inst_2,
 
+    input [31:0]                vaddr_inst_3,
+    output logic [31:0]         paddr_inst_3,
+    output logic                miss_inst_3,
+    output logic                valid_inst_3,
+    output logic                uncached_inst_3,
+
     input [31:0]                vaddr_data,
     output logic [31:0]         paddr_data,
     output logic                miss_data,
@@ -87,6 +93,22 @@ module tlb_top(
         .miss               (miss_inst_2),
         .valid              (valid_inst_2),
         .uncached           (uncached_inst_2),
+        .cp0_index          (cp0_index), 
+        .cp0_random         (cp0_random),
+        .cp0_tlb_conf_in    (cp0_tlb_conf_in)
+    );
+
+    tlb_common tlb_inst_3(
+        .clk                (clk),
+        .rst                (rst),
+        .tlbwi              (tlbwi),
+        .tlbwr              (tlbwr),
+        .curr_ASID          (curr_ASID),
+        .vaddr              (vaddr_inst_3),
+        .paddr              (paddr_inst_3),
+        .miss               (miss_inst_3),
+        .valid              (valid_inst_3),
+        .uncached           (uncached_inst_3),
         .cp0_index          (cp0_index), 
         .cp0_random         (cp0_random),
         .cp0_tlb_conf_in    (cp0_tlb_conf_in)

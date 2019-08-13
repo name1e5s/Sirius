@@ -30,7 +30,7 @@ module cp0(
 
         // TLB...
         input                       miss_probe,
-        input [3:0]                 matched_index_probe,
+        input [2:0]                 matched_index_probe,
         output logic                user_mode,
         output logic                cp0_kseg0_uncached,
         output logic [7:0]          curr_ASID,

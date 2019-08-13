@@ -363,6 +363,12 @@ module sirius(
     wire        pc_tlb_invalid_seq1;
     wire        pc_tlb_uncached_seq1;
 
+    wire [31:0] pc_address_psy_next_seq2;
+    wire        pc_tlb_miss_seq2;
+    wire        pc_tlb_illegal_seq2;
+    wire        pc_tlb_invalid_seq2;
+    wire        pc_tlb_uncached_seq2;
+
     pc pc_0(
         .clk                    (clk),
         .rst                    (rst),
@@ -395,6 +401,12 @@ module sirius(
         .pc_tlb_illegal_seq1    (pc_tlb_illegal_seq1),
         .pc_tlb_invalid_seq1    (pc_tlb_invalid_seq1),
         .pc_tlb_uncached_seq1   (pc_tlb_uncached_seq1),
+
+        .pc_address_psy_next_seq2(pc_address_psy_next_seq2),
+        .pc_tlb_miss_seq2       (pc_tlb_miss_seq2),
+        .pc_tlb_illegal_seq2    (pc_tlb_illegal_seq2),
+        .pc_tlb_invalid_seq2    (pc_tlb_invalid_seq2),
+        .pc_tlb_uncached_seq2   (pc_tlb_uncached_seq2),
 
         .pc_address             (if_pc_address),
         .pc_address_psy         (inst_addr),
@@ -958,6 +970,14 @@ module sirius(
         .inst_miss_2                (pc_tlb_miss_seq1),
         .inst_illegal_2             (pc_tlb_illegal_seq1),
         .inst_tlb_invalid_2         (pc_tlb_invalid_seq1),
+
+        .iaddr_3                    (mem_exception_address),
+        .inst_en_3                  (1'd1),
+        .iaddr_psy_3                (pc_address_psy_next_seq2),
+        .inst_uncached_3            (pc_tlb_uncached_seq2),
+        .inst_miss_3                (pc_tlb_miss_seq2),
+        .inst_illegal_3             (pc_tlb_illegal_seq2),
+        .inst_tlb_invalid_3         (pc_tlb_invalid_seq2),
 
         .daddr                      (id_ex_daddr),
         .data_en                    (id_ex_mem_type != `MEM_NOOP),

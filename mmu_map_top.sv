@@ -30,6 +30,14 @@ module mmu_map_top(
     output logic                inst_illegal_2,
     output logic                inst_tlb_invalid_2,
 
+    input [31:0]                iaddr_3,
+    input                       inst_en_3,
+    output logic [31:0]         iaddr_psy_3,
+    output logic                inst_uncached_3,
+    output logic                inst_miss_3,
+    output logic                inst_illegal_3,
+    output logic                inst_tlb_invalid_3,
+
     input [31:0]                daddr,
     input                       data_en,
     output logic [31:0]         daddr_psy,
@@ -46,8 +54,8 @@ module mmu_map_top(
     input                       user_mode,
     input                       cp0_kseg0_uncached,
     input [7:0]                 curr_ASID,
-    input [3:0]                 cp0_index,
-    input [3:0]                 cp0_random,
+    input [2:0]                 cp0_index,
+    input [2:0]                 cp0_random,
     input [85:0]                cp0_tlb_conf_in,
     output logic [85:0]         cp0_tlb_conf_out
 );
@@ -56,20 +64,24 @@ module mmu_map_top(
     wire [31:0] ipaddr_direct;
     wire [31:0] ipaddr_direct_1;
     wire [31:0] ipaddr_direct_2;
+    wire [31:0] ipaddr_direct_3;
     wire [31:0] dpaddr_direct;
     wire [31:0] ipaddr_tlb;
     wire [31:0] ipaddr_tlb_1;
     wire [31:0] ipaddr_tlb_2;
+    wire [31:0] ipaddr_tlb_3;
     wire [31:0] dpaddr_tlb;
 
     wire iaddr_uncached_direct;
     wire iaddr_uncached_direct_1;
     wire iaddr_uncached_direct_2;
+    wire iaddr_uncached_direct_3;
     wire daddr_uncached_direct;
 
     wire iaddr_in_tlb;
     wire iaddr_in_tlb_1;
     wire iaddr_in_tlb_2;
+    wire iaddr_in_tlb_3;
     wire daddr_in_tlb;
 
     logic                miss_inst;
@@ -81,6 +93,9 @@ module mmu_map_top(
     logic                miss_inst_2;
     logic                valid_inst_2;
     logic                uncached_inst_2;
+    logic                miss_inst_3;
+    logic                valid_inst_3;
+    logic                uncached_inst_3;
 
     logic                miss_data;
     logic                valid_data;
@@ -99,6 +114,10 @@ module mmu_map_top(
     assign inst_uncached_2      = iaddr_in_tlb_2 ? uncached_inst_2 : iaddr_uncached_direct_2;
     assign inst_miss_2          = iaddr_in_tlb_2 && miss_inst_2;
     assign inst_tlb_invalid_2   = iaddr_in_tlb_2 && ~valid_inst_2;
+    assign iaddr_psy_3          = iaddr_in_tlb_3 ? ipaddr_tlb_3 : ipaddr_direct_3;
+    assign inst_uncached_3      = iaddr_in_tlb_3 ? uncached_inst_3 : iaddr_uncached_direct_3;
+    assign inst_miss_3          = iaddr_in_tlb_3 && miss_inst_3;
+    assign inst_tlb_invalid_3   = iaddr_in_tlb_3 && ~valid_inst_3;
 
     assign daddr_psy        = daddr_in_tlb ? dpaddr_tlb : dpaddr_direct;
     assign data_uncached    = daddr_in_tlb ? uncached_data : daddr_uncached_direct;
@@ -145,6 +164,19 @@ module mmu_map_top(
         .addr_in_tlb            (iaddr_in_tlb_2)
     );
 
+    mmu_map mmu_map_inst_3(
+        .clk                    (clk),
+        .rst                    (rst),
+        .en                     (inst_en_3),
+        .vaddr                  (iaddr_3),
+        .user_mode              (user_mode),
+        .cp0_kseg0_uncached     (cp0_kseg0_uncached),
+        .paddr                  (ipaddr_direct_3),
+        .addr_invalid           (inst_illegal_3),
+        .addr_uncached          (iaddr_uncached_direct_3),
+        .addr_in_tlb            (iaddr_in_tlb_3)
+    );
+
     mmu_map mmu_map_data(
         .clk                    (clk),
         .rst                    (rst),
@@ -180,6 +212,11 @@ module mmu_map_top(
         .miss_inst_2            (miss_inst_2),
         .valid_inst_2           (valid_inst_2),
         .uncached_inst_2        (uncached_inst_2),
+        .vaddr_inst_3           (iaddr_3),
+        .paddr_inst_3           (ipaddr_tlb_3),
+        .miss_inst_3            (miss_inst_3),
+        .valid_inst_3           (valid_inst_3),
+        .uncached_inst_3        (uncached_inst_3),
         .vaddr_data             (daddr),
         .paddr_data             (dpaddr_tlb),
         .miss_data              (miss_data),
