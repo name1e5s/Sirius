@@ -46,7 +46,13 @@ module mycpu_top(
 		 input [3 :0]  bid ,
 		 input [1 :0]  bresp ,
 		 input 	       bvalid ,
-		 output        bready
+		 output        bready,
+
+		 // Debug port
+		 output [31:0] debug_wb_pc,
+		 output [3:0]  debug_wb_rf_wen,
+		 output [4:0]  debug_wb_rf_wnum,
+		 output [31:0] debug_wb_rf_wdata
 		 );
 
    wire         ien, iok, iok1, iok2, den, dok;
